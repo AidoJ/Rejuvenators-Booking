@@ -100,6 +100,50 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     };
   }
+  
+  // Step7 summary and stripe setup - this should trigger when entering step 7
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        const step7 = document.getElementById('step7');
+        if (step7 && step7.classList.contains('active')) {
+          // Step 7 is now active, update summary and setup Stripe
+          const summary = document.getElementById('summary');
+          const price = calculatePrice();
+          const customerName = document.getElementById('customerName').value;
+          const customerEmail = document.getElementById('customerEmail').value;
+          const customerPhone = document.getElementById('customerPhone').value;
+          
+          summary.innerHTML = `
+            <h3>Booking Summary</h3>
+            <p><strong>Customer:</strong> ${customerName}</p>
+            <p><strong>Email:</strong> ${customerEmail}</p>
+            <p><strong>Phone:</strong> ${customerPhone}</p>
+            <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
+            <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
+            <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
+            <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
+            <p><strong>Total Price: $${price}</strong></p>
+          `;
+          
+          // Initialize Stripe
+          if (typeof Stripe !== 'undefined') {
+            const stripe = Stripe('pk_test_12345');
+            const elements = stripe.elements();
+            const card = elements.create('card');
+            document.getElementById('card-element').innerHTML = ''; 
+            card.mount('#card-element');
+          }
+        }
+      }
+    });
+  });
+  
+  // Start observing
+  observer.observe(document.getElementById('step7'), {
+    attributes: true,
+    attributeFilter: ['class']
+  });
 });
 
 // Haversine distance
@@ -165,31 +209,35 @@ document.getElementById('requestBtn').onclick = () => {
   // 4. Replace the placeholder values below with your actual EmailJS credentials
   
   // For testing purposes, we'll simulate the email sending
-  console.log('Sending email to:', 'aishizhengjing@gmail.com');
+  console.log('Sending email to:', 'aidanleo@yahoo.co.uk');
   console.log('Email content:', summaryText);
   
   // Try to send via EmailJS if configured, otherwise simulate success
   if (typeof emailjs !== 'undefined' && emailjs.init) {
+    console.log('EmailJS is available, attempting to send email...');
     emailjs.init('V8qq2pjH8vfh3a6q3');
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: selectedTherapistInfo.name,
-      to_email: 'aishizhengjing@gmail.com', // Fixed email address
+      to_email: 'aidanleo@yahoo.co.uk', // Updated email address
       message: summaryText,
       customer_name: customerName,
       customer_email: customerEmail,
       customer_phone: customerPhone,
       booking_details: summaryText
-    }).then(() => {
-      console.log('Booking request email sent successfully');
+    }).then((response) => {
+      console.log('EmailJS success response:', response);
       document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
       show('step6');
     }).catch(err => {
-      console.error('EmailJS error:', err);
+      console.error('EmailJS error details:', err);
+      console.error('EmailJS error text:', err.text);
+      console.error('EmailJS error status:', err.status);
       // Fallback: simulate success for testing
       document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
       show('step6');
     });
   } else {
+    console.log('EmailJS not available, simulating email send...');
     // EmailJS not configured, simulate success
     document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
     show('step6');
@@ -203,35 +251,6 @@ document.getElementById('acceptBtn').onclick=()=>{
 document.getElementById('declineBtn').onclick=()=>{
   document.getElementById('finalMsg').innerText='Booking Request Declined';
   show('step8');
-};
-
-// Step7 summary and stripe setup
-document.querySelector('.next[data-next="step7"]').onclick=()=>{
-  const summary=document.getElementById('summary');
-  const price=calculatePrice();
-  const customerName = document.getElementById('customerName').value;
-  const customerEmail = document.getElementById('customerEmail').value;
-  const customerPhone = document.getElementById('customerPhone').value;
-  
-  summary.innerHTML=`
-    <h3>Booking Summary</h3>
-    <p><strong>Customer:</strong> ${customerName}</p>
-    <p><strong>Email:</strong> ${customerEmail}</p>
-    <p><strong>Phone:</strong> ${customerPhone}</p>
-    <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
-    <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
-    <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
-    <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
-    <p><strong>Total Price: $${price}</strong></p>
-  `;
-  
-  // Initialize Stripe
-  if (typeof Stripe !== 'undefined') {
-    const stripe=Stripe('pk_test_12345'), elements=stripe.elements(), card=elements.create('card');
-    document.getElementById('card-element').innerHTML=''; 
-    card.mount('#card-element');
-  }
-  show('step7');
 };
 
 // Price calculation
