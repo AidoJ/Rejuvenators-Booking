@@ -121,20 +121,39 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Handle URL parameters for accept/decline functionality
   const urlParams = new URLSearchParams(window.location.search);
-  const action = urlParams.get('action');
-  const therapistName = urlParams.get('therapist');
-  const bookingData = urlParams.get('booking');
+  const action = urlParams.get('a') || urlParams.get('action'); // Support both old and new format
+  const therapistName = urlParams.get('t') || urlParams.get('therapist'); // Support both old and new format
+  const bookingData = urlParams.get('b') || urlParams.get('booking'); // Support both old and new format
   
   if (action && bookingData && therapistName) {
     try {
       const booking = JSON.parse(decodeURIComponent(bookingData));
+      
+      // Convert compact format to full format for compatibility
+      const fullBooking = {
+        customerName: booking.customerName || booking.n,
+        customerEmail: booking.customerEmail || booking.e,
+        customerPhone: booking.customerPhone || booking.p,
+        address: booking.address || booking.a,
+        service: booking.service || booking.s,
+        duration: booking.duration || booking.d,
+        date: booking.date || booking.dt,
+        time: booking.time || booking.tm,
+        parking: booking.parking || booking.pk,
+        price: booking.price || booking.pr,
+        therapistName: booking.therapistName || booking.tn
+      };
+      
       if (action === 'accept') {
         // Set flag to prevent sending emails to other therapists
         bookingAccepted = true;
         console.log('Booking accepted by', therapistName, '- stopping further therapist emails');
         
-        // Process payment now that therapist has accepted
-        processPaymentAfterAcceptance(booking, therapistName);
+        // Send admin notification
+        sendAdminNotification(fullBooking, therapistName);
+        
+        // Show simple confirmation page
+        showSimpleConfirmation(therapistName, fullBooking);
       } else if (action === 'decline') {
         // Show decline message and move to next therapist
         document.getElementById('requestMsg').innerText = `${therapistName} declined. Trying next therapist...`;
@@ -409,9 +428,9 @@ function sendRequestToCurrentTherapist() {
   console.log('Available therapists length:', availableTherapists.length);
   console.log('Booking accepted flag:', bookingAccepted);
   
-  // Check if booking has already been accepted
+  // Check if booking has already been accepted - CRITICAL CHECK
   if (bookingAccepted) {
-    console.log('Booking already accepted, stopping therapist assignment');
+    console.log('Booking already accepted, stopping therapist assignment immediately');
     return;
   }
   
@@ -425,6 +444,12 @@ function sendRequestToCurrentTherapist() {
 
   const currentTherapist = availableTherapists[currentTherapistIndex];
   console.log('Current therapist:', currentTherapist);
+  
+  // Final check before sending email
+  if (bookingAccepted) {
+    console.log('Booking accepted just before sending email, aborting');
+    return;
+  }
   
   document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi)`;
   
@@ -584,25 +609,17 @@ function sendTherapistEmail(therapist) {
       <p><strong>Price:</strong> $${price}</p>
       <br>
       <p><strong>Please respond within 120 seconds:</strong></p>
-      <p><a href="${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-        customerName, customerEmail, customerPhone, address,
-        service: document.getElementById('service').value,
-        duration: document.getElementById('duration').value,
-        date: document.getElementById('date').value,
-        time: document.getElementById('time').value,
-        parking: document.getElementById('parking').value,
-        price: price,
-        therapistName: therapist.name
+      <p><a href="${window.location.origin}${window.location.pathname}?a=accept&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
+        n: customerName, e: customerEmail, p: customerPhone, a: address,
+        s: document.getElementById('service').value, d: document.getElementById('duration').value,
+        dt: document.getElementById('date').value, tm: document.getElementById('time').value,
+        pk: document.getElementById('parking').value, pr: price, tn: therapist.name
       }))}">ACCEPT</a></p>
-      <p><a href="${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-        customerName, customerEmail, customerPhone, address,
-        service: document.getElementById('service').value,
-        duration: document.getElementById('duration').value,
-        date: document.getElementById('date').value,
-        time: document.getElementById('time').value,
-        parking: document.getElementById('parking').value,
-        price: price,
-        therapistName: therapist.name
+      <p><a href="${window.location.origin}${window.location.pathname}?a=decline&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
+        n: customerName, e: customerEmail, p: customerPhone, a: address,
+        s: document.getElementById('service').value, d: document.getElementById('duration').value,
+        dt: document.getElementById('date').value, tm: document.getElementById('time').value,
+        pk: document.getElementById('parking').value, pr: price, tn: therapist.name
       }))}">DECLINE</a></p>
     `;
     
@@ -755,20 +772,27 @@ function startCountdown() {
   }
   
   const countdown = setInterval(() => {
-    timeRemaining--;
-    console.log('Timer tick:', timeRemaining);
-    timerElement.textContent = `${timeRemaining} seconds`;
-    
     // Check if booking has been accepted during countdown
     if (bookingAccepted) {
-      console.log('Booking accepted during countdown, stopping timer');
+      console.log('Booking accepted during countdown, stopping timer immediately');
       clearInterval(countdown);
       return;
     }
     
+    timeRemaining--;
+    console.log('Timer tick:', timeRemaining);
+    timerElement.textContent = `${timeRemaining} seconds`;
+    
     if (timeRemaining <= 0) {
       console.log('Timer expired, moving to next therapist');
       clearInterval(countdown);
+      
+      // Double-check if booking was accepted before moving to next therapist
+      if (bookingAccepted) {
+        console.log('Booking was accepted, stopping therapist assignment');
+        return;
+      }
+      
       // Timeout - move to next therapist
       currentTherapistIndex++;
       timeRemaining = 120;
@@ -823,4 +847,105 @@ function processPaymentAfterAcceptance(booking, therapistName) {
       show('step8');
     }, 3000);
   }
+}
+
+// Send admin notification
+function sendAdminNotification(booking, therapistName) {
+  console.log('Sending admin notification...');
+  
+  if (typeof emailjs !== 'undefined' && emailjs.init) {
+    const adminEmailHTML = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #28a745; margin-bottom: 10px;">✅ Booking Confirmed!</h1>
+          <p style="color: #666; font-size: 16px;">A therapist has accepted a booking request</p>
+        </div>
+        
+        <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+          <h3 style="color: #28a745; margin-top: 0;">Booking Details</h3>
+          <p><strong>Therapist:</strong> ${therapistName}</p>
+          <p><strong>Customer:</strong> ${booking.customerName}</p>
+          <p><strong>Email:</strong> ${booking.customerEmail}</p>
+          <p><strong>Phone:</strong> ${booking.customerPhone}</p>
+          <p><strong>Address:</strong> ${booking.address}</p>
+          <p><strong>Service:</strong> ${booking.service}</p>
+          <p><strong>Duration:</strong> ${booking.duration} minutes</p>
+          <p><strong>Date:</strong> ${booking.date}</p>
+          <p><strong>Time:</strong> ${booking.time}</p>
+          <p><strong>Total Amount:</strong> $${booking.price}</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666;">
+          <p><strong>Rejuvenators Mobile Massage</strong></p>
+          <p>Booking confirmed automatically</p>
+        </div>
+      </div>
+    `;
+    
+    emailjs.send('service_puww2kb','template_zh8jess', {
+      to_name: 'Admin',
+      to_email: 'ajleo2205@gmail.com',
+      message: `Booking confirmed by ${therapistName} for ${booking.customerName} on ${booking.date} at ${booking.time}. Service: ${booking.service}, Duration: ${booking.duration}min, Address: ${booking.address}, Price: $${booking.price}`,
+      message_html: adminEmailHTML,
+      html_message: adminEmailHTML,
+      customer_name: booking.customerName,
+      customer_email: booking.customerEmail,
+      customer_phone: booking.customerPhone,
+      address_for_massage: booking.address,
+      therapist_name: therapistName,
+      booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Price: $${booking.price}`
+    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+      console.log('Admin notification sent successfully:', response);
+    }).catch(err => {
+      console.error('Admin notification failed:', err);
+    });
+  } else {
+    console.error('EmailJS not available for admin notification');
+  }
+}
+
+// Show simple confirmation page
+function showSimpleConfirmation(therapistName, booking) {
+  console.log('Showing simple confirmation page...');
+  
+  // Clear any existing timeout
+  if (therapistTimeout) {
+    clearInterval(therapistTimeout);
+  }
+  
+  // Create a simple confirmation page
+  const confirmationHTML = `
+    <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif;">
+      <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
+        <h1 style="color: #28a745; margin-bottom: 20px;">Booking Confirmed!</h1>
+        <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
+          ${therapistName} has accepted your booking request.
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+          <h3 style="color: #00729B; margin-top: 0;">Booking Details</h3>
+          <p><strong>Customer:</strong> ${booking.customerName}</p>
+          <p><strong>Service:</strong> ${booking.service}</p>
+          <p><strong>Duration:</strong> ${booking.duration} minutes</p>
+          <p><strong>Date:</strong> ${booking.date}</p>
+          <p><strong>Time:</strong> ${booking.time}</p>
+          <p><strong>Address:</strong> ${booking.address}</p>
+          <p><strong>Total Amount:</strong> $${booking.price}</p>
+        </div>
+        
+        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+          <p style="margin: 0; color: #28a745;"><strong>Payment will be processed automatically.</strong></p>
+        </div>
+        
+        <p style="color: #666; font-size: 14px; margin-top: 30px;">
+          You will receive a confirmation email shortly.<br>
+          Thank you for choosing Rejuvenators Mobile Massage!
+        </p>
+      </div>
+    </div>
+  `;
+  
+  // Replace the entire page content
+  document.body.innerHTML = confirmationHTML;
 }
