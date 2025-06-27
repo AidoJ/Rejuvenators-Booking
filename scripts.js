@@ -115,7 +115,28 @@ function show(step) {
   document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
   document.getElementById(step).classList.add('active');
   current=step;
+  
+  // Update progress bar
+  updateProgressBar(step);
 }
+
+// Update progress bar based on current step
+function updateProgressBar(step) {
+  const progressSteps = document.querySelectorAll('.progress-step');
+  const stepNumber = parseInt(step.replace('step', ''));
+  
+  progressSteps.forEach((stepElement, index) => {
+    const stepNum = index + 1;
+    stepElement.classList.remove('active', 'completed');
+    
+    if (stepNum < stepNumber) {
+      stepElement.classList.add('completed');
+    } else if (stepNum === stepNumber) {
+      stepElement.classList.add('active');
+    }
+  });
+}
+
 document.querySelectorAll('.next').forEach(b=>b.onclick=()=>show(b.dataset.next));
 document.querySelectorAll('.prev').forEach(b=>b.onclick=()=>show(b.dataset.prev));
 
@@ -133,6 +154,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Generate unique booking ID for this session
   bookingId = 'booking_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   console.log('Generated booking ID:', bookingId);
+  
+  // Initialize progress bar
+  updateProgressBar('step1');
   
   // Load Google Maps API securely
   loadGoogleMapsAPI();
@@ -372,11 +396,11 @@ function handleTherapistResponse(action, therapistName, bookingData, receivedBoo
 
 // Show already accepted message
 function showAlreadyAcceptedMessage() {
-  document.body.innerHTML = `
-    <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif;">
-      <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+  document.documentElement.innerHTML = `
+    <div style="text-align: center; padding: 50px 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
         <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
-        <h1 style="color: #f0ad4e; margin-bottom: 20px;">Booking Already Accepted</h1>
+        <h1 style="color: #f0ad4e; margin-bottom: 20px; font-size: 32px;">Booking Already Accepted</h1>
         <p style="font-size: 18px; color: #666;">
           This booking has already been accepted by another therapist.
         </p>
@@ -387,10 +411,10 @@ function showAlreadyAcceptedMessage() {
 
 // Show decline message
 function showDeclineMessage(therapistName) {
-  document.body.innerHTML = `
-    <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif;">
-      <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h1 style="color: #dc3545; margin-bottom: 20px;">Booking Declined</h1>
+  document.documentElement.innerHTML = `
+    <div style="text-align: center; padding: 50px 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <h1 style="color: #dc3545; margin-bottom: 20px; font-size: 32px;">Booking Declined</h1>
         <p style="font-size: 18px; color: #666;">
           Thank you for your response. The booking has been declined.
         </p>
@@ -741,12 +765,15 @@ function showSimpleConfirmation(therapistName, booking) {
     clearInterval(therapistTimeout);
   }
   
+  // Stop all therapist assignment processes
+  stopTherapistAssignment('showSimpleConfirmation called');
+  
   // Create a simple confirmation page
   const confirmationHTML = `
-    <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif;">
-      <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <div style="text-align: center; padding: 50px 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+      <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
         <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
-        <h1 style="color: #28a745; margin-bottom: 20px;">Booking Confirmed!</h1>
+        <h1 style="color: #28a745; margin-bottom: 20px; font-size: 32px;">Booking Confirmed!</h1>
         <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
           ${therapistName} has accepted your booking request.
         </p>
@@ -779,8 +806,8 @@ function showSimpleConfirmation(therapistName, booking) {
     </div>
   `;
   
-  // Replace the entire page content
-  document.body.innerHTML = confirmationHTML;
+  // Replace the entire page content - this ensures no form is shown
+  document.documentElement.innerHTML = confirmationHTML;
   
   // Send confirmation email to customer
   sendCustomerConfirmationEmail(booking, therapistName);

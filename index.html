@@ -12,98 +12,202 @@
 <body>
   <div id="container">
     <h1>Rejuvenators Mobile Massage Booking</h1>
+    
+    <!-- Progress Bar -->
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-step active" data-step="1">1</div>
+        <div class="progress-step" data-step="2">2</div>
+        <div class="progress-step" data-step="3">3</div>
+        <div class="progress-step" data-step="4">4</div>
+        <div class="progress-step" data-step="5">5</div>
+        <div class="progress-step" data-step="6">6</div>
+      </div>
+    </div>
+    
     <!-- Debug Button (temporary) -->
     <div style="text-align: center; margin-bottom: 20px;">
       <button id="debugBtn" style="background: #00729B; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">Debug: Test Therapist Assignment</button>
     </div>
+    
     <!-- Step 1: Address -->
     <div id="step1" class="step active">
-      <h2>1. Address For Massage</h2>
-      <input type="text" id="address" placeholder="Start typing your address..." />
-      <button class="btn next" data-next="step2">Next</button>
+      <div class="step-header">
+        <h2>📍 Where would you like your massage?</h2>
+        <p class="step-description">Enter the address where you'd like us to come for your massage</p>
+      </div>
+      <div class="step-content">
+        <input type="text" id="address" placeholder="Start typing your address..." />
+        <button class="btn next" data-next="step2">Continue</button>
+      </div>
     </div>
+    
     <!-- Step 2: Customer Details -->
     <div id="step2" class="step">
-      <h2>2. Customer Details</h2>
-      <input type="text" id="customerName" placeholder="Full Name" required />
-      <input type="email" id="customerEmail" placeholder="Email Address" required />
-      <input type="tel" id="customerPhone" placeholder="Phone Number" required />
-      <button class="btn prev" data-prev="step1">Back</button>
-      <button class="btn next" data-next="step3">Next</button>
+      <div class="step-header">
+        <h2>👤 Your Details</h2>
+        <p class="step-description">Tell us a bit about yourself so we can contact you</p>
+      </div>
+      <div class="step-content">
+        <input type="text" id="customerName" placeholder="Full Name" required />
+        <input type="email" id="customerEmail" placeholder="Email Address" required />
+        <input type="tel" id="customerPhone" placeholder="Phone Number" required />
+        <div class="button-group">
+          <button class="btn prev" data-prev="step1">Back</button>
+          <button class="btn next" data-next="step3">Continue</button>
+        </div>
+      </div>
     </div>
+    
     <!-- Step 3: Service & Duration -->
     <div id="step3" class="step">
-      <h2>3. Select Service & Duration</h2>
-      <select id="service">
-        <option>Stressbuster</option><option>Sports</option><option>Deep Tissue</option>
-        <option>Remedial</option><option>Aromatherapy</option><option>Couples</option>
-      </select>
-      <select id="duration">
-        <option value="60">60 min</option><option value="75">75 min</option>
-        <option value="90">90 min</option><option value="120">120 min</option>
-      </select>
-      <select id="parking">
-        <option value="free">Free Parking Available</option>
-        <option value="paid">Paid Parking Required</option>
-      </select>
-      <button class="btn prev" data-prev="step2">Back</button>
-      <button class="btn next" data-next="step4">Next</button>
+      <div class="step-header">
+        <h2>💆‍♀️ Choose Your Service</h2>
+        <p class="step-description">Select the type of massage and how long you'd like it</p>
+      </div>
+      <div class="step-content">
+        <div class="form-group">
+          <label for="service">Massage Type</label>
+          <select id="service">
+            <option>Stressbuster</option>
+            <option>Sports</option>
+            <option>Deep Tissue</option>
+            <option>Remedial</option>
+            <option>Aromatherapy</option>
+            <option>Couples</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="duration">Duration</label>
+          <select id="duration">
+            <option value="60">60 min</option>
+            <option value="75">75 min</option>
+            <option value="90">90 min</option>
+            <option value="120">120 min</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="parking">Parking</label>
+          <select id="parking">
+            <option value="free">Free Parking Available</option>
+            <option value="paid">Paid Parking Required</option>
+          </select>
+        </div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step2">Back</button>
+          <button class="btn next" data-next="step4">Continue</button>
+        </div>
+      </div>
     </div>
+    
     <!-- Step 4: Date & Time -->
     <div id="step4" class="step">
-      <h2>4. Choose Date & Time</h2>
-      <input type="date" id="date"/>
-      <select id="time">
-        <option value="09:00">9:00 AM</option><option value="09:30">9:30 AM</option>
-        <option value="10:00">10:00 AM</option><option value="10:30">10:30 AM</option>
-        <option value="11:00">11:00 AM</option><option value="11:30">11:30 AM</option>
-        <option value="12:00">12:00 PM</option><option value="12:30">12:30 PM</option>
-        <option value="13:00">1:00 PM</option><option value="13:30">1:30 PM</option>
-        <option value="14:00">2:00 PM</option><option value="14:30">2:30 PM</option>
-        <option value="15:00">3:00 PM</option><option value="15:30">3:30 PM</option>
-        <option value="16:00">4:00 PM</option><option value="16:30">4:30 PM</option>
-        <option value="17:00">5:00 PM</option><option value="17:30">5:30 PM</option>
-        <option value="18:00">6:00 PM</option><option value="18:30">6:30 PM</option>
-        <option value="19:00">7:00 PM</option><option value="19:30">7:30 PM</option>
-        <option value="20:00">8:00 PM</option><option value="20:30">8:30 PM</option>
-      </select>
-      <div id="priceDisplay" style="background:#e0f7fa; padding:10px; margin:10px 0; border-radius:4px; text-align:center;">
-        <strong>Estimated Price: $<span id="priceAmount">159.00</span></strong>
-        <div id="priceBreakdown" style="font-size: 12px; margin-top: 5px; color: #666;"></div>
+      <div class="step-header">
+        <h2>📅 Pick Your Date & Time</h2>
+        <p class="step-description">Choose when you'd like your massage</p>
       </div>
-      <button class="btn prev" data-prev="step3">Back</button>
-      <button class="btn next" data-next="step5">Next</button>
+      <div class="step-content">
+        <div class="form-group">
+          <label for="date">Date</label>
+          <input type="date" id="date"/>
+        </div>
+        <div class="form-group">
+          <label for="time">Time</label>
+          <select id="time">
+            <option value="09:00">9:00 AM</option>
+            <option value="09:30">9:30 AM</option>
+            <option value="10:00">10:00 AM</option>
+            <option value="10:30">10:30 AM</option>
+            <option value="11:00">11:00 AM</option>
+            <option value="11:30">11:30 AM</option>
+            <option value="12:00">12:00 PM</option>
+            <option value="12:30">12:30 PM</option>
+            <option value="13:00">1:00 PM</option>
+            <option value="13:30">1:30 PM</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="14:30">2:30 PM</option>
+            <option value="15:00">3:00 PM</option>
+            <option value="15:30">3:30 PM</option>
+            <option value="16:00">4:00 PM</option>
+            <option value="16:30">4:30 PM</option>
+            <option value="17:00">5:00 PM</option>
+            <option value="17:30">5:30 PM</option>
+            <option value="18:00">6:00 PM</option>
+            <option value="18:30">6:30 PM</option>
+            <option value="19:00">7:00 PM</option>
+            <option value="19:30">7:30 PM</option>
+            <option value="20:00">8:00 PM</option>
+            <option value="20:30">8:30 PM</option>
+          </select>
+        </div>
+        <div id="priceDisplay" class="price-display">
+          <strong>Estimated Price: $<span id="priceAmount">159.00</span></strong>
+          <div id="priceBreakdown" class="price-breakdown"></div>
+        </div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step3">Back</button>
+          <button class="btn next" data-next="step5">Continue</button>
+        </div>
+      </div>
     </div>
+    
     <!-- Step 5: Therapist Selection -->
     <div id="step5" class="step">
-      <h2>5. Select Therapist</h2>
-      <div id="therapistSelection"></div>
-      <button class="btn prev" data-prev="step4">Back</button>
-      <button class="btn next" data-next="step6">Next</button>
+      <div class="step-header">
+        <h2>👨‍⚕️ Choose Your Therapist</h2>
+        <p class="step-description">Select your preferred therapist from our available team</p>
+      </div>
+      <div class="step-content">
+        <div id="therapistSelection"></div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step4">Back</button>
+          <button class="btn next" data-next="step6">Continue</button>
+        </div>
+      </div>
     </div>
+    
     <!-- Step 6: Payment -->
     <div id="step6" class="step">
-      <h2>6. Payment Details</h2>
-      <div id="summary"></div>
-      <p style="color: #666; font-size: 14px; margin: 10px 0;">Your card will only be charged after a therapist accepts your booking request.</p>
-      <div id="card-element"></div>
-      <button class="btn prev" data-prev="step5">Back</button>
-      <button id="payBtn" class="btn primary" disabled>Submit Booking Request</button>
+      <div class="step-header">
+        <h2>💳 Payment Details</h2>
+        <p class="step-description">Your card will only be charged after a therapist accepts your booking</p>
+      </div>
+      <div class="step-content">
+        <div id="summary" class="booking-summary"></div>
+        <div id="card-element" class="card-element"></div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step5">Back</button>
+          <button id="payBtn" class="btn primary" disabled>Submit Booking Request</button>
+        </div>
+      </div>
     </div>
+    
     <!-- Step 7: Booking Request (Accept/Decline) -->
     <div id="step7" class="step">
-      <h2>7. Booking Request</h2>
-      <p id="requestMsg">Payment successful! Request sent to therapist...</p>
-      <div id="therapistStatus">
-        <p><strong>Current Therapist:</strong> <span id="currentTherapist">Loading...</span></p>
-        <p><strong>Time Remaining:</strong> <span id="timeRemaining">120 seconds</span></p>
+      <div class="step-header">
+        <h2>⏳ Booking Request Sent</h2>
+        <p class="step-description">We're contacting your therapist now...</p>
       </div>
-      <button id="acceptBtn" class="btn" style="display: none;">Simulate Accept</button>
-      <button id="declineBtn" class="btn" style="display: none;">Simulate Decline</button>
+      <div class="step-content">
+        <p id="requestMsg">Payment successful! Request sent to therapist...</p>
+        <div id="therapistStatus" class="therapist-status">
+          <p><strong>Current Therapist:</strong> <span id="currentTherapist">Loading...</span></p>
+          <p><strong>Time Remaining:</strong> <span id="timeRemaining">120 seconds</span></p>
+        </div>
+        <button id="acceptBtn" class="btn" style="display: none;">Simulate Accept</button>
+        <button id="declineBtn" class="btn" style="display: none;">Simulate Decline</button>
+      </div>
     </div>
+    
     <!-- Step 8: Final Confirmation -->
     <div id="step8" class="step">
-      <h2 id="finalMsg">Thank you!</h2>
+      <div class="step-header">
+        <h2>🎉 Thank You!</h2>
+        <p class="step-description">Your booking has been confirmed</p>
+      </div>
+      <div class="step-content">
+        <div id="finalMsg">Thank you!</div>
+      </div>
     </div>
   </div>
   <script src="scripts.js"></script>
