@@ -18,9 +18,18 @@
       <input type="text" id="address" placeholder="Start typing your address..." />
       <button class="btn next" data-next="step2">Next</button>
     </div>
-    <!-- Step 2: Service & Duration -->
+    <!-- Step 2: Customer Details -->
     <div id="step2" class="step">
-      <h2>2. Select Service & Duration</h2>
+      <h2>2. Customer Details</h2>
+      <input type="text" id="customerName" placeholder="Full Name" required />
+      <input type="email" id="customerEmail" placeholder="Email Address" required />
+      <input type="tel" id="customerPhone" placeholder="Phone Number" required />
+      <button class="btn prev" data-prev="step1">Back</button>
+      <button class="btn next" data-next="step3">Next</button>
+    </div>
+    <!-- Step 3: Service & Duration -->
+    <div id="step3" class="step">
+      <h2>3. Select Service & Duration</h2>
       <select id="service">
         <option>Stressbuster</option><option>Sports</option><option>Deep Tissue</option>
         <option>Remedial</option><option>Aromatherapy</option><option>Couples</option>
@@ -33,12 +42,12 @@
         <option value="free">Free Parking Available</option>
         <option value="paid">Paid Parking Required</option>
       </select>
-      <button class="btn prev" data-prev="step1">Back</button>
-      <button class="btn next" data-next="step3">Next</button>
+      <button class="btn prev" data-prev="step2">Back</button>
+      <button class="btn next" data-next="step4">Next</button>
     </div>
-    <!-- Step 3: Date & Time -->
-    <div id="step3" class="step">
-      <h2>3. Choose Date & Time</h2>
+    <!-- Step 4: Date & Time -->
+    <div id="step4" class="step">
+      <h2>4. Choose Date & Time</h2>
       <input type="date" id="date"/>
       <select id="time">
         <option value="09:00">9:00 AM</option><option value="09:30">9:30 AM</option>
@@ -58,33 +67,33 @@
         <strong>Estimated Price: $<span id="priceAmount">159.00</span></strong>
         <div id="priceBreakdown" style="font-size: 12px; margin-top: 5px; color: #666;"></div>
       </div>
-      <button class="btn prev" data-prev="step2">Back</button>
-      <button class="btn next" data-next="step4">Next</button>
-    </div>
-    <!-- Step 4: Therapist Selection -->
-    <div id="step4" class="step">
-      <h2>4. Select Therapist</h2>
-      <div id="therapistSelection"></div>
       <button class="btn prev" data-prev="step3">Back</button>
-      <button id="requestBtn" class="btn next" data-next="step5">Request Booking</button>
+      <button class="btn next" data-next="step5">Next</button>
     </div>
-    <!-- Step 5: Booking Request (Accept/Decline) -->
+    <!-- Step 5: Therapist Selection -->
     <div id="step5" class="step">
-      <h2>5. Booking Request</h2>
+      <h2>5. Select Therapist</h2>
+      <div id="therapistSelection"></div>
+      <button class="btn prev" data-prev="step4">Back</button>
+      <button id="requestBtn" class="btn next" data-next="step6">Request Booking</button>
+    </div>
+    <!-- Step 6: Booking Request (Accept/Decline) -->
+    <div id="step6" class="step">
+      <h2>6. Booking Request</h2>
       <p id="requestMsg">Request sent to therapist...</p>
       <button id="acceptBtn" class="btn">Simulate Accept</button>
       <button id="declineBtn" class="btn">Simulate Decline</button>
     </div>
-    <!-- Step 6: Payment -->
-    <div id="step6" class="step">
-      <h2>6. Confirm & Pay</h2>
+    <!-- Step 7: Payment -->
+    <div id="step7" class="step">
+      <h2>7. Confirm & Pay</h2>
       <div id="summary"></div>
       <div id="card-element"></div>
-      <button class="btn prev" data-prev="step5">Back</button>
+      <button class="btn prev" data-prev="step6">Back</button>
       <button id="payBtn" class="btn primary">Pay</button>
     </div>
-    <!-- Step 7: Final Confirmation -->
-    <div id="step7" class="step">
+    <!-- Step 8: Final Confirmation -->
+    <div id="step8" class="step">
       <h2 id="finalMsg">Thank you!</h2>
     </div>
   </div>

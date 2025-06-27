@@ -52,26 +52,55 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initial price calculation
   updatePriceDisplay();
-});
-
-// After datetime step to fetch therapists
-document.querySelector('.next[data-next="step4"]').onclick=()=> {
-  fetch('mock-api/therapists.json').then(r=>r.json()).then(data=>{
-    const selDiv=document.getElementById('therapistSelection');
-    selDiv.innerHTML='<select id="therapistSelect"></select>';
-    const sel=document.getElementById('therapistSelect');
-    data.forEach(t=>{
-      const d = distance(currentLat, currentLon, t.lat, t.lon);
-      if(d<=10 && t.available) {
-        let opt=document.createElement('option');
-        opt.value=JSON.stringify(t);
-        opt.text=`${t.name} (${d.toFixed(1)} mi)`;
-        sel.append(opt);
+  
+  // Handle URL parameters for accept/decline functionality
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = urlParams.get('action');
+  const bookingData = urlParams.get('booking');
+  
+  if (action && bookingData) {
+    try {
+      const booking = JSON.parse(decodeURIComponent(bookingData));
+      if (action === 'accept') {
+        // Show acceptance message and proceed to payment
+        document.getElementById('requestMsg').innerText = 'Booking Accepted! Proceeding to payment...';
+        show('step6');
+        // Auto-proceed to payment after a short delay
+        setTimeout(() => {
+          show('step7');
+        }, 2000);
+      } else if (action === 'decline') {
+        // Show decline message
+        document.getElementById('finalMsg').innerText = 'Booking Request Declined';
+        show('step8');
       }
-    });
-    show('step4');
-  });
-};
+    } catch (e) {
+      console.error('Error parsing booking data:', e);
+    }
+  }
+  
+  // After datetime step to fetch therapists
+  const nextToStep5Btn = document.querySelector('.next[data-next="step5"]');
+  if (nextToStep5Btn) {
+    nextToStep5Btn.onclick = () => {
+      fetch('mock-api/therapists.json').then(r=>r.json()).then(data=>{
+        const selDiv=document.getElementById('therapistSelection');
+        selDiv.innerHTML='<select id="therapistSelect"></select>';
+        const sel=document.getElementById('therapistSelect');
+        data.forEach(t=>{
+          const d = distance(currentLat, currentLon, t.lat, t.lon);
+          if(d<=10 && t.available) {
+            let opt=document.createElement('option');
+            opt.value=JSON.stringify(t);
+            opt.text=`${t.name} (${d.toFixed(1)} mi)`;
+            sel.append(opt);
+          }
+        });
+        show('step5');
+      });
+    };
+  }
+});
 
 // Haversine distance
 function distance(lat1,lon1,lat2,lon2){
@@ -85,13 +114,44 @@ document.getElementById('requestBtn').onclick = () => {
   // 1. Calculate price
   const price = calculatePrice();
 
-  // 2. Build a summary (you can also inject this into your UI if you like)
+  // 2. Build a comprehensive summary for the email
+  const customerName = document.getElementById('customerName').value;
+  const customerEmail = document.getElementById('customerEmail').value;
+  const customerPhone = document.getElementById('customerPhone').value;
+  const address = document.getElementById('address').value;
+  
   const summaryText =
-    `Booking Request:\n` +
+    `NEW BOOKING REQUEST\n\n` +
+    `Customer Details:\n` +
+    `Name: ${customerName}\n` +
+    `Email: ${customerEmail}\n` +
+    `Phone: ${customerPhone}\n\n` +
+    `Booking Details:\n` +
+    `Address: ${address}\n` +
     `Service: ${document.getElementById('service').value}\n` +
     `Duration: ${document.getElementById('duration').value} min\n` +
-    `Date & Time: ${document.getElementById('date').value} ${document.getElementById('time').value}\n` +
-    `Total: $${price}`;
+    `Date: ${document.getElementById('date').value}\n` +
+    `Time: ${document.getElementById('time').value}\n` +
+    `Parking: ${document.getElementById('parking').value}\n` +
+    `Total Price: $${price}\n\n` +
+    `To accept this booking, click: ${window.location.origin}${window.location.pathname}?action=accept&booking=${encodeURIComponent(JSON.stringify({
+      customerName, customerEmail, customerPhone, address,
+      service: document.getElementById('service').value,
+      duration: document.getElementById('duration').value,
+      date: document.getElementById('date').value,
+      time: document.getElementById('time').value,
+      parking: document.getElementById('parking').value,
+      price: price
+    }))}\n\n` +
+    `To decline this booking, click: ${window.location.origin}${window.location.pathname}?action=decline&booking=${encodeURIComponent(JSON.stringify({
+      customerName, customerEmail, customerPhone, address,
+      service: document.getElementById('service').value,
+      duration: document.getElementById('duration').value,
+      date: document.getElementById('date').value,
+      time: document.getElementById('time').value,
+      parking: document.getElementById('parking').value,
+      price: price
+    }))}`;
 
   // 3. Grab the selected therapist
   const sel = document.getElementById('therapistSelect').value;
@@ -105,7 +165,7 @@ document.getElementById('requestBtn').onclick = () => {
   // 4. Replace the placeholder values below with your actual EmailJS credentials
   
   // For testing purposes, we'll simulate the email sending
-  console.log('Simulating email send to:', 'aishizhengjing@gmail.com');
+  console.log('Sending email to:', 'aishizhengjing@gmail.com');
   console.log('Email content:', summaryText);
   
   // Try to send via EmailJS if configured, otherwise simulate success
@@ -114,41 +174,64 @@ document.getElementById('requestBtn').onclick = () => {
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: selectedTherapistInfo.name,
       to_email: 'aishizhengjing@gmail.com', // Fixed email address
-      message: summaryText
+      message: summaryText,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
+      booking_details: summaryText
     }).then(() => {
-      console.log('Booking request email sent');
+      console.log('Booking request email sent successfully');
       document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
-      show('step5');
+      show('step6');
     }).catch(err => {
       console.error('EmailJS error:', err);
       // Fallback: simulate success for testing
       document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
-      show('step5');
+      show('step6');
     });
   } else {
     // EmailJS not configured, simulate success
     document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
-    show('step5');
+    show('step6');
   }
 };
 
 // Accept/Decline simulation
 document.getElementById('acceptBtn').onclick=()=>{
-  show('step6');
+  show('step7');
 };
 document.getElementById('declineBtn').onclick=()=>{
   document.getElementById('finalMsg').innerText='Booking Request Declined';
-  show('step7');
+  show('step8');
 };
 
-// Step6 summary and stripe setup
-document.querySelector('.next[data-next="step6"]').onclick=()=>{
+// Step7 summary and stripe setup
+document.querySelector('.next[data-next="step7"]').onclick=()=>{
   const summary=document.getElementById('summary');
   const price=calculatePrice();
-  summary.innerHTML=`<p><strong>Total Price: $${price}</strong></p>`;
-  const stripe=Stripe('pk_test_12345'), elements=stripe.elements(), card=elements.create('card');
-  document.getElementById('card-element').innerHTML=''; card.mount('#card-element');
-  show('step6');
+  const customerName = document.getElementById('customerName').value;
+  const customerEmail = document.getElementById('customerEmail').value;
+  const customerPhone = document.getElementById('customerPhone').value;
+  
+  summary.innerHTML=`
+    <h3>Booking Summary</h3>
+    <p><strong>Customer:</strong> ${customerName}</p>
+    <p><strong>Email:</strong> ${customerEmail}</p>
+    <p><strong>Phone:</strong> ${customerPhone}</p>
+    <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
+    <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
+    <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
+    <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
+    <p><strong>Total Price: $${price}</strong></p>
+  `;
+  
+  // Initialize Stripe
+  if (typeof Stripe !== 'undefined') {
+    const stripe=Stripe('pk_test_12345'), elements=stripe.elements(), card=elements.create('card');
+    document.getElementById('card-element').innerHTML=''; 
+    card.mount('#card-element');
+  }
+  show('step7');
 };
 
 // Price calculation
@@ -199,10 +282,26 @@ function calculatePrice(){
 
 // Payment
 document.getElementById('payBtn').onclick=()=>{
-  const stripe=Stripe('pk_test_12345');
-  stripe.createToken(document.querySelector('input[name="cardnumber"]')||card).then(res=>{
-    if(res.error) return alert(res.error.message);
+  if (typeof Stripe !== 'undefined') {
+    const stripe=Stripe('pk_test_12345');
+    const cardElement = document.querySelector('#card-element .StripeElement');
+    if (cardElement) {
+      stripe.createToken(cardElement).then(res=>{
+        if(res.error) {
+          alert(res.error.message);
+          return;
+        }
+        document.getElementById('finalMsg').innerText='Payment Successful! Booking Confirmed';
+        show('step8');
+      });
+    } else {
+      // Simulate successful payment for testing
+      document.getElementById('finalMsg').innerText='Payment Successful! Booking Confirmed';
+      show('step8');
+    }
+  } else {
+    // Stripe not loaded, simulate success
     document.getElementById('finalMsg').innerText='Payment Successful! Booking Confirmed';
-    show('step7');
-  });
+    show('step8');
+  }
 };
