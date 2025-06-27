@@ -662,19 +662,26 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
   const customerName = booking.customerName;
   const customerEmail = booking.customerEmail;
 
-  // Updated HTML to include therapist information
+  // Updated HTML to include therapist information and match the therapist email style
   const customerEmailHTML = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
-      <h2 style="color: #00729B; text-align: center;">Booking Confirmed!</h2>
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+        <h1 style="color: #28a745; margin-bottom: 10px;">Booking Confirmed!</h1>
+        <p style="color: #666; font-size: 16px;">Your massage booking has been accepted</p>
+      </div>
+      
       <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
         <h3 style="color: #28a745; margin-top: 0;">✅ Your booking has been accepted!</h3>
         <p><strong>Therapist:</strong> ${therapistName}</p>
       </div>
+      
       <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
         <h3 style="color: #005f7d; margin-top: 0;">Your Details</h3>
         <p><strong>Name:</strong> ${customerName}</p>
         <p><strong>Email:</strong> ${customerEmail}</p>
       </div>
+      
       <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
         <h3 style="color: #005f7d; margin-top: 0;">Booking Details</h3>
         <p><strong>Address For Massage:</strong> ${booking.address}</p>
@@ -685,9 +692,16 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
         <p><strong>Parking:</strong> ${booking.parking}</p>
         <p><strong>Total Price:</strong> $${booking.price}</p>
       </div>
+      
       <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107;">
         <p style="margin: 0; color: #856404;"><strong>Payment Information:</strong> Your payment has been processed successfully.</p>
       </div>
+      
+      <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+        <h3 style="color: #28a745; margin-top: 0;">What's Next?</h3>
+        <p>${therapistName} will contact you before your appointment to confirm details and provide any special instructions. Please ensure someone is available at the address at the scheduled time.</p>
+      </div>
+      
       <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
         <p><strong>Rejuvenators Mobile Massage</strong></p>
         <p>Bringing wellness to your doorstep</p>
@@ -701,7 +715,7 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
       to_email: customerEmail, // Send to customer's actual email
-      message: '', // No plain text, only HTML
+      message: `Booking confirmed! ${therapistName} has accepted your booking for ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`, // Plain text fallback
       message_html: customerEmailHTML,
       html_message: customerEmailHTML,
       html_content: customerEmailHTML,
@@ -716,4 +730,58 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
   } else {
     console.error('EmailJS not available for customer email');
   }
+}
+
+// Show simple confirmation page
+function showSimpleConfirmation(therapistName, booking) {
+  console.log('Showing simple confirmation page...');
+  
+  // Clear any existing timeout
+  if (therapistTimeout) {
+    clearInterval(therapistTimeout);
+  }
+  
+  // Create a simple confirmation page
+  const confirmationHTML = `
+    <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif;">
+      <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
+        <h1 style="color: #28a745; margin-bottom: 20px;">Booking Confirmed!</h1>
+        <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
+          ${therapistName} has accepted your booking request.
+        </p>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+          <h3 style="color: #00729B; margin-top: 0;">Booking Details</h3>
+          <p><strong>Customer:</strong> ${booking.customerName}</p>
+          <p><strong>Service:</strong> ${booking.service}</p>
+          <p><strong>Duration:</strong> ${booking.duration} minutes</p>
+          <p><strong>Date:</strong> ${booking.date}</p>
+          <p><strong>Time:</strong> ${booking.time}</p>
+          <p><strong>Address:</strong> ${booking.address}</p>
+          <p><strong>Total Amount:</strong> $${booking.price}</p>
+        </div>
+        
+        <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+          <p style="margin: 0; color: #28a745;"><strong>Payment has been processed successfully.</strong></p>
+        </div>
+        
+        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+          <p style="margin: 0; color: #856404;"><strong>What's Next?</strong></p>
+          <p style="margin: 10px 0 0 0; color: #856404;">You will receive a confirmation email shortly with all the details. ${therapistName} will contact you before your appointment.</p>
+        </div>
+        
+        <p style="color: #666; font-size: 14px; margin-top: 30px;">
+          Thank you for choosing Rejuvenators Mobile Massage!<br>
+          We look forward to providing you with an amazing massage experience.
+        </p>
+      </div>
+    </div>
+  `;
+  
+  // Replace the entire page content
+  document.body.innerHTML = confirmationHTML;
+  
+  // Send confirmation email to customer
+  sendCustomerConfirmationEmail(booking, therapistName);
 }
