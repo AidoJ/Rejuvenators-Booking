@@ -120,17 +120,45 @@ document.addEventListener('DOMContentLoaded', function() {
     nextToStep5Btn.onclick = () => {
       fetch('mock-api/therapists.json').then(r=>r.json()).then(data=>{
         const selDiv=document.getElementById('therapistSelection');
-        selDiv.innerHTML='<select id="therapistSelect"></select>';
-        const sel=document.getElementById('therapistSelect');
+        const availableTherapists = [];
+        
         data.forEach(t=>{
           const d = distance(currentLat, currentLon, t.lat, t.lon);
           if(d<=10 && t.available) {
-            let opt=document.createElement('option');
-            opt.value=JSON.stringify(t);
-            opt.text=`${t.name} (${d.toFixed(1)} mi)`;
-            sel.append(opt);
+            availableTherapists.push({...t, distance: d});
           }
         });
+        
+        if (availableTherapists.length === 0) {
+          selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Unfortunately we don\'t have any therapists available in your area right now.</p>';
+          // Disable the request button
+          const requestBtn = document.getElementById('requestBtn');
+          if (requestBtn) {
+            requestBtn.disabled = true;
+            requestBtn.style.opacity = '0.5';
+            requestBtn.textContent = 'No Therapists Available';
+          }
+        } else {
+          // Sort by distance
+          availableTherapists.sort((a, b) => a.distance - b.distance);
+          
+          selDiv.innerHTML='<select id="therapistSelect"></select>';
+          const sel=document.getElementById('therapistSelect');
+          availableTherapists.forEach(t=>{
+            let opt=document.createElement('option');
+            opt.value=JSON.stringify(t);
+            opt.text=`${t.name} (${t.distance.toFixed(1)} mi)`;
+            sel.append(opt);
+          });
+          
+          // Re-enable the request button
+          const requestBtn = document.getElementById('requestBtn');
+          if (requestBtn) {
+            requestBtn.disabled = false;
+            requestBtn.style.opacity = '1';
+            requestBtn.textContent = 'Request Booking';
+          }
+        }
         show('step5');
       });
     };
@@ -148,12 +176,14 @@ document.addEventListener('DOMContentLoaded', function() {
           const customerName = document.getElementById('customerName').value;
           const customerEmail = document.getElementById('customerEmail').value;
           const customerPhone = document.getElementById('customerPhone').value;
+          const address = document.getElementById('address').value;
           
           summary.innerHTML = `
             <h3>Booking Summary</h3>
             <p><strong>Customer:</strong> ${customerName}</p>
             <p><strong>Email:</strong> ${customerEmail}</p>
             <p><strong>Phone:</strong> ${customerPhone}</p>
+            <p><strong>Address For Massage:</strong> ${address}</p>
             <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
             <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
             <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
@@ -233,31 +263,68 @@ document.getElementById('requestBtn').onclick = () => {
     `Email: ${customerEmail}\n` +
     `Phone: ${customerPhone}\n\n` +
     `Booking Details:\n` +
-    `Address: ${address}\n` +
+    `Address For Massage: ${address}\n` +
     `Service: ${document.getElementById('service').value}\n` +
     `Duration: ${document.getElementById('duration').value} min\n` +
     `Date: ${document.getElementById('date').value}\n` +
     `Time: ${document.getElementById('time').value}\n` +
     `Parking: ${document.getElementById('parking').value}\n` +
     `Total Price: $${price}\n\n` +
-    `To accept this booking, click: ${window.location.origin}${window.location.pathname}?action=accept&booking=${encodeURIComponent(JSON.stringify({
-      customerName, customerEmail, customerPhone, address,
-      service: document.getElementById('service').value,
-      duration: document.getElementById('duration').value,
-      date: document.getElementById('date').value,
-      time: document.getElementById('time').value,
-      parking: document.getElementById('parking').value,
-      price: price
-    }))}\n\n` +
-    `To decline this booking, click: ${window.location.origin}${window.location.pathname}?action=decline&booking=${encodeURIComponent(JSON.stringify({
-      customerName, customerEmail, customerPhone, address,
-      service: document.getElementById('service').value,
-      duration: document.getElementById('duration').value,
-      date: document.getElementById('date').value,
-      time: document.getElementById('time').value,
-      parking: document.getElementById('parking').value,
-      price: price
-    }))}`;
+    `Please respond to this booking request by clicking one of the buttons below:`;
+
+  // Create HTML email with buttons
+  const emailHTML = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+      <h2 style="color: #00729B; text-align: center;">NEW BOOKING REQUEST</h2>
+      
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Customer Details</h3>
+        <p><strong>Name:</strong> ${customerName}</p>
+        <p><strong>Email:</strong> ${customerEmail}</p>
+        <p><strong>Phone:</strong> ${customerPhone}</p>
+      </div>
+      
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Booking Details</h3>
+        <p><strong>Address For Massage:</strong> ${address}</p>
+        <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
+        <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
+        <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
+        <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
+        <p><strong>Parking:</strong> ${document.getElementById('parking').value}</p>
+        <p><strong>Total Price:</strong> $${price}</p>
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <p style="font-size: 16px; color: #333;">Please respond to this booking request:</p>
+        <div style="margin: 20px 0;">
+          <a href="${window.location.origin}${window.location.pathname}?action=accept&booking=${encodeURIComponent(JSON.stringify({
+            customerName, customerEmail, customerPhone, address,
+            service: document.getElementById('service').value,
+            duration: document.getElementById('duration').value,
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            parking: document.getElementById('parking').value,
+            price: price
+          }))}" style="display: inline-block; background: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">✅ ACCEPT</a>
+          
+          <a href="${window.location.origin}${window.location.pathname}?action=decline&booking=${encodeURIComponent(JSON.stringify({
+            customerName, customerEmail, customerPhone, address,
+            service: document.getElementById('service').value,
+            duration: document.getElementById('duration').value,
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            parking: document.getElementById('parking').value,
+            price: price
+          }))}" style="display: inline-block; background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">❌ DECLINE</a>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
+        <p>This booking request was sent from the Rejuvenators Mobile Massage Booking System</p>
+      </div>
+    </div>
+  `;
 
   // 3. Grab the selected therapist
   const sel = document.getElementById('therapistSelect').value;
@@ -281,10 +348,12 @@ document.getElementById('requestBtn').onclick = () => {
       to_name: selectedTherapistInfo.name,
       to_email: 'aidanleo@yahoo.co.uk', // Updated email address
       message: summaryText,
+      message_html: emailHTML, // Add HTML version
       customer_name: customerName,
       customer_email: customerEmail,
       customer_phone: customerPhone,
-      booking_details: summaryText
+      booking_details: summaryText,
+      address_for_massage: address
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
       console.log('EmailJS success response:', response);
       document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
