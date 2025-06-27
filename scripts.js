@@ -11,6 +11,7 @@ let bookingAccepted = false; // Flag to prevent sending emails to other therapis
 // Load Google API key securely and initialize Maps
 async function loadGoogleMapsAPI() {
   try {
+    // Try to load from secure endpoint first
     const response = await fetch('/api/google-key');
     const data = await response.json();
     
@@ -21,11 +22,38 @@ async function loadGoogleMapsAPI() {
       script.async = true;
       script.defer = true;
       document.head.appendChild(script);
+      console.log('Google Maps API loaded securely from server');
     } else {
-      console.error('Failed to load Google API key');
+      console.error('Failed to load Google API key from server');
+      loadGoogleMapsAPIFallback();
     }
   } catch (error) {
-    console.error('Error loading Google API key:', error);
+    console.log('Secure endpoint not available, using fallback method');
+    loadGoogleMapsAPIFallback();
+  }
+}
+
+// Fallback method for when secure server is not available
+function loadGoogleMapsAPIFallback() {
+  // For development/testing, you can temporarily use the API key directly
+  // In production, this should be replaced with proper server-side handling
+  const apiKey = 'AIzaSyBo632bfwdyKtue_-wkAms0Ac2mMRVnTWg'; // Your API key
+  
+  if (apiKey && apiKey !== 'your_google_api_key_here') {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initAutocomplete`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+    console.log('Google Maps API loaded with fallback method');
+  } else {
+    console.error('No valid Google API key available');
+    // Show error message to user
+    const addressInput = document.getElementById('address');
+    if (addressInput) {
+      addressInput.placeholder = 'Address autocomplete not available - please enter address manually';
+      addressInput.style.backgroundColor = '#fff3cd';
+    }
   }
 }
 
@@ -40,14 +68,42 @@ function initEmailJS() {
 }
 
 function initAutocomplete() {
-  autocomplete = new google.maps.places.Autocomplete(
-    document.getElementById('address'), { componentRestrictions:{country:'au'} }
-  );
-  autocomplete.addListener('place_changed', () => {
-    const place = autocomplete.getPlace();
-    currentLat = place.geometry.location.lat();
-    currentLon = place.geometry.location.lng();
-  });
+  console.log('Initializing Google Places Autocomplete...');
+  
+  const addressInput = document.getElementById('address');
+  if (!addressInput) {
+    console.error('Address input element not found');
+    return;
+  }
+  
+  if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+    console.error('Google Maps API not loaded properly');
+    return;
+  }
+  
+  try {
+    autocomplete = new google.maps.places.Autocomplete(
+      addressInput, 
+      { componentRestrictions: { country: 'au' } }
+    );
+    
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      console.log('Place selected:', place);
+      
+      if (place.geometry && place.geometry.location) {
+        currentLat = place.geometry.location.lat();
+        currentLon = place.geometry.location.lng();
+        console.log('Coordinates set:', currentLat, currentLon);
+      } else {
+        console.error('No geometry found for selected place');
+      }
+    });
+    
+    console.log('Google Places Autocomplete initialized successfully');
+  } catch (error) {
+    console.error('Error initializing autocomplete:', error);
+  }
 }
 window.initAutocomplete = initAutocomplete;
 
@@ -77,26 +133,23 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize EmailJS
   initEmailJS();
   
-  // Test EmailJS functionality - REMOVED to prevent duplicate emails
-  // setTimeout(() => {
-  //   if (typeof emailjs !== 'undefined') {
-  //     console.log('Testing EmailJS...');
-  //     // Simple test email
-  //     emailjs.send('service_puww2kb','template_zh8jess', {
-  //       to_name: 'Test',
-  //       to_email: 'aidanleo@yahoo.co.uk',
-  //       message: 'This is a test email from the booking system',
-  //       customer_name: 'Test Customer',
-  //       customer_email: 'test@example.com',
-  //       customer_phone: '123-456-7890',
-  //       booking_details: 'Test booking details'
-  //     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-  //       console.log('Test email sent successfully:', response);
-  //     }).catch(err => {
-  //       console.error('Test email failed:', err);
-  //     });
-  //   }
-  // }, 2000);
+  // Set up manual address input fallback
+  const addressInput = document.getElementById('address');
+  if (addressInput) {
+    // Add manual input handling for when autocomplete fails
+    addressInput.addEventListener('input', function() {
+      // If user types manually, we can still use the address
+      // The coordinates will be set to a default location for distance calculation
+      if (this.value.length > 10) {
+        // Set default coordinates for Brisbane CBD if no coordinates available
+        if (!currentLat || !currentLon) {
+          currentLat = -27.4698; // Brisbane CBD latitude
+          currentLon = 153.0251; // Brisbane CBD longitude
+          console.log('Using default coordinates for distance calculation');
+        }
+      }
+    });
+  }
   
   const durationSelect = document.getElementById('duration');
   const parkingSelect = document.getElementById('parking');
