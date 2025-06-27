@@ -198,6 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
       };
       
       if (action === 'accept') {
+        localStorage.setItem('bookingAccepted', 'true');
         stopTherapistAssignment('Therapist accepted.');
         sendAdminNotification(fullBooking, therapistName);
         showSimpleConfirmation(therapistName, fullBooking);
@@ -252,7 +253,11 @@ document.addEventListener('DOMContentLoaded', function() {
             opt.text=`${t.name} (${t.distance.toFixed(1)} mi)`;
             sel.append(opt);
           });
-          
+          // Default to first therapist
+          selectedTherapistInfo = availableTherapists[0];
+          sel.onchange = function() {
+            selectedTherapistInfo = JSON.parse(this.value);
+          };
           // Re-enable the request button
           const requestBtn = document.getElementById('requestBtn');
           if (requestBtn) {
@@ -270,10 +275,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const requestBtn = document.getElementById('requestBtn');
   if (requestBtn) {
     requestBtn.onclick = () => {
-      const sel = document.getElementById('therapistSelect');
-      if (sel && sel.value) {
-        // Only use the selected therapist
-        availableTherapists = [JSON.parse(sel.value)];
+      if (selectedTherapistInfo) {
+        availableTherapists = [selectedTherapistInfo];
       }
       startTherapistAssignment();
     };
@@ -891,3 +894,10 @@ function stopTherapistAssignment(reason = '') {
     console.log('Therapist timer cleared.');
   }
 }
+
+// --- Cross-Tab Acceptance Sync ---
+window.addEventListener('storage', function(e) {
+  if (e.key === 'bookingAccepted' && e.newValue === 'true') {
+    stopTherapistAssignment('Detected acceptance in another tab/window.');
+  }
+});
