@@ -6,6 +6,7 @@ let availableTherapists = [];
 let currentTherapistIndex = 0;
 let therapistTimeout = null;
 let timeRemaining = 120; // 120 seconds for testing
+let bookingAccepted = false; // Flag to prevent sending emails to other therapists
 
 // Initialize EmailJS
 function initEmailJS() {
@@ -104,6 +105,10 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const booking = JSON.parse(decodeURIComponent(bookingData));
       if (action === 'accept') {
+        // Set flag to prevent sending emails to other therapists
+        bookingAccepted = true;
+        console.log('Booking accepted by', therapistName, '- stopping further therapist emails');
+        
         // Process payment now that therapist has accepted
         processPaymentAfterAcceptance(booking, therapistName);
       } else if (action === 'decline') {
@@ -362,6 +367,8 @@ function startTherapistAssignment() {
   console.log('Starting therapist assignment process...');
   console.log('Available therapists:', availableTherapists);
   
+  // Reset booking accepted flag for new booking
+  bookingAccepted = false;
   currentTherapistIndex = 0;
   timeRemaining = 120;
   show('step7');
@@ -376,6 +383,13 @@ function startTherapistAssignment() {
 function sendRequestToCurrentTherapist() {
   console.log('Sending request to therapist index:', currentTherapistIndex);
   console.log('Available therapists length:', availableTherapists.length);
+  console.log('Booking accepted flag:', bookingAccepted);
+  
+  // Check if booking has already been accepted
+  if (bookingAccepted) {
+    console.log('Booking already accepted, stopping therapist assignment');
+    return;
+  }
   
   if (currentTherapistIndex >= availableTherapists.length) {
     // No more therapists available
@@ -469,27 +483,31 @@ function sendTherapistEmail(therapist) {
       <div style="text-align: center; margin: 30px 0;">
         <p style="font-size: 16px; color: #333;">Please respond to this booking request within 120 seconds:</p>
         <div style="margin: 20px 0;">
-          <a href="${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-            customerName, customerEmail, customerPhone, address,
-            service: document.getElementById('service').value,
-            duration: document.getElementById('duration').value,
-            date: document.getElementById('date').value,
-            time: document.getElementById('time').value,
-            parking: document.getElementById('parking').value,
-            price: price,
-            therapistName: therapist.name
-          }))}" style="display: inline-block; background: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">✅ ACCEPT</a>
+          <p style="margin: 10px 0;">
+            <a href="${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
+              customerName, customerEmail, customerPhone, address,
+              service: document.getElementById('service').value,
+              duration: document.getElementById('duration').value,
+              date: document.getElementById('date').value,
+              time: document.getElementById('time').value,
+              parking: document.getElementById('parking').value,
+              price: price,
+              therapistName: therapist.name
+            }))}" style="color: #28a745; text-decoration: none; font-weight: bold; font-size: 18px;">ACCEPT</a>
+          </p>
           
-          <a href="${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-            customerName, customerEmail, customerPhone, address,
-            service: document.getElementById('service').value,
-            duration: document.getElementById('duration').value,
-            date: document.getElementById('date').value,
-            time: document.getElementById('time').value,
-            parking: document.getElementById('parking').value,
-            price: price,
-            therapistName: therapist.name
-          }))}" style="display: inline-block; background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">❌ DECLINE</a>
+          <p style="margin: 10px 0;">
+            <a href="${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
+              customerName, customerEmail, customerPhone, address,
+              service: document.getElementById('service').value,
+              duration: document.getElementById('duration').value,
+              date: document.getElementById('date').value,
+              time: document.getElementById('time').value,
+              parking: document.getElementById('parking').value,
+              price: price,
+              therapistName: therapist.name
+            }))}" style="color: #dc3545; text-decoration: none; font-weight: bold; font-size: 18px;">DECLINE</a>
+          </p>
         </div>
       </div>
       
@@ -654,6 +672,13 @@ function startCountdown() {
     timeRemaining--;
     console.log('Timer tick:', timeRemaining);
     timerElement.textContent = `${timeRemaining} seconds`;
+    
+    // Check if booking has been accepted during countdown
+    if (bookingAccepted) {
+      console.log('Booking accepted during countdown, stopping timer');
+      clearInterval(countdown);
+      return;
+    }
     
     if (timeRemaining <= 0) {
       console.log('Timer expired, moving to next therapist');
