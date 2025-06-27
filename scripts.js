@@ -649,6 +649,18 @@ function sendTherapistEmail(therapist) {
     console.log('Attempting to send therapist email...');
     
     // Create a simpler email format that should work better
+    const acceptUrl = `${window.location.origin}${window.location.pathname}?a=accept&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
+      n: customerName, e: customerEmail, p: customerPhone, a: address,
+      s: document.getElementById('service').value, d: document.getElementById('duration').value,
+      dt: document.getElementById('date').value, tm: document.getElementById('time').value,
+      pk: document.getElementById('parking').value, pr: price, tn: therapist.name
+    }))}`;
+    const declineUrl = `${window.location.origin}${window.location.pathname}?a=decline&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
+      n: customerName, e: customerEmail, p: customerPhone, a: address,
+      s: document.getElementById('service').value, d: document.getElementById('duration').value,
+      dt: document.getElementById('date').value, tm: document.getElementById('time').value,
+      pk: document.getElementById('parking').value, pr: price, tn: therapist.name
+    }))}`;
     const simpleEmailHTML = `
       <h2>NEW BOOKING REQUEST</h2>
       <p><strong>Customer:</strong> ${customerName}</p>
@@ -662,21 +674,18 @@ function sendTherapistEmail(therapist) {
       <p><strong>Price:</strong> $${price}</p>
       <br>
       <p><strong>Please respond within 120 seconds:</strong></p>
-      <p><a href="${window.location.origin}${window.location.pathname}?a=accept&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
-        n: customerName, e: customerEmail, p: customerPhone, a: address,
-        s: document.getElementById('service').value, d: document.getElementById('duration').value,
-        dt: document.getElementById('date').value, tm: document.getElementById('time').value,
-        pk: document.getElementById('parking').value, pr: price, tn: therapist.name
-      }))}">ACCEPT</a></p>
-      <p><a href="${window.location.origin}${window.location.pathname}?a=decline&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
-        n: customerName, e: customerEmail, p: customerPhone, a: address,
-        s: document.getElementById('service').value, d: document.getElementById('duration').value,
-        dt: document.getElementById('date').value, tm: document.getElementById('time').value,
-        pk: document.getElementById('parking').value, pr: price, tn: therapist.name
-      }))}">DECLINE</a></p>
+      <p>
+        <a href="${acceptUrl}" style="color: #28a745; text-decoration: underline; font-weight: bold;">Accept</a>
+        &nbsp;|&nbsp;
+        <a href="${declineUrl}" style="color: #dc3545; text-decoration: underline; font-weight: bold;">Decline</a>
+      </p>
     `;
     
-    console.log('Simple email HTML:', simpleEmailHTML);
+    // Final check before sending therapist email
+    if (bookingAccepted) {
+      console.log('Booking already accepted, not sending therapist email');
+      return;
+    }
     
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: therapist.name,
@@ -690,26 +699,8 @@ function sendTherapistEmail(therapist) {
       customer_phone: customerPhone,
       address_for_massage: address,
       therapist_name: therapist.name,
-      accept_link: `${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-        customerName, customerEmail, customerPhone, address,
-        service: document.getElementById('service').value,
-        duration: document.getElementById('duration').value,
-        date: document.getElementById('date').value,
-        time: document.getElementById('time').value,
-        parking: document.getElementById('parking').value,
-        price: price,
-        therapistName: therapist.name
-      }))}`,
-      decline_link: `${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-        customerName, customerEmail, customerPhone, address,
-        service: document.getElementById('service').value,
-        duration: document.getElementById('duration').value,
-        date: document.getElementById('date').value,
-        time: document.getElementById('time').value,
-        parking: document.getElementById('parking').value,
-        price: price,
-        therapistName: therapist.name
-      }))}`
+      accept_link: acceptUrl,
+      decline_link: declineUrl
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
       console.log('Email sent to therapist successfully:', therapist.name, response);
     }).catch(err => {
