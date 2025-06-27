@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
       };
       
       if (action === 'accept') {
-        localStorage.setItem('bookingAccepted', 'true');
+        sessionStorage.setItem('bookingAccepted', 'true');
         stopTherapistAssignment('Therapist accepted.');
         sendAdminNotification(fullBooking, therapistName);
         showSimpleConfirmation(therapistName, fullBooking);
@@ -482,10 +482,12 @@ function startTherapistAssignment() {
 
 // Send request to current therapist
 function sendRequestToCurrentTherapist() {
-  if (bookingAccepted) {
+  // Check for acceptance before doing anything
+  if (checkForAcceptance() || bookingAccepted) {
     stopTherapistAssignment('sendRequestToCurrentTherapist called but already accepted.');
     return;
   }
+  
   console.log('Sending request to therapist index:', currentTherapistIndex);
   console.log('Available therapists length:', availableTherapists.length);
   console.log('Booking accepted flag:', bookingAccepted);
@@ -502,7 +504,7 @@ function sendRequestToCurrentTherapist() {
   console.log('Current therapist:', currentTherapist);
 
   // Final check before sending email
-  if (bookingAccepted) {
+  if (checkForAcceptance() || bookingAccepted) {
     stopTherapistAssignment('sendRequestToCurrentTherapist about to send email but already accepted.');
     return;
   }
@@ -525,10 +527,12 @@ function sendRequestToCurrentTherapist() {
 
 // Send email to therapist
 function sendTherapistEmail(therapist) {
-  if (bookingAccepted) {
+  // Check for acceptance before sending email
+  if (checkForAcceptance() || bookingAccepted) {
     stopTherapistAssignment('sendTherapistEmail called but already accepted.');
     return;
   }
+  
   console.log('Sending email to therapist:', therapist.name);
 
   const price = calculatePrice();
@@ -684,52 +688,54 @@ function sendCustomerConfirmationEmail() {
 
 // Start countdown timer
 function startCountdown() {
-  if (bookingAccepted) {
+  // Check for acceptance before starting timer
+  if (checkForAcceptance() || bookingAccepted) {
     stopTherapistAssignment('startCountdown called but already accepted.');
     return;
   }
-  console.log('Starting countdown timer with timeRemaining:', timeRemaining);
   
+  console.log('Starting countdown timer with timeRemaining:', timeRemaining);
+
   const timerElement = document.getElementById('timeRemaining');
   if (!timerElement) {
     console.error('Timer element not found!');
     return;
   }
-  
+
   // Clear any existing timer
   if (therapistTimeout) {
     clearInterval(therapistTimeout);
   }
-  
+
   const countdown = setInterval(() => {
-    // Bulletproof check
-    if (bookingAccepted) {
+    // Check for acceptance on every timer tick
+    if (checkForAcceptance() || bookingAccepted) {
       stopTherapistAssignment('Countdown tick detected acceptance.');
       clearInterval(countdown);
       return;
     }
-    
+
     timeRemaining--;
     console.log('Timer tick:', timeRemaining);
     timerElement.textContent = `${timeRemaining} seconds`;
-    
+
     if (timeRemaining <= 0) {
       console.log('Timer expired, moving to next therapist');
       clearInterval(countdown);
-      
+
       // Double-check if booking was accepted before moving to next therapist
-      if (bookingAccepted) {
+      if (checkForAcceptance() || bookingAccepted) {
         stopTherapistAssignment('Timer expired but acceptance detected.');
         return;
       }
-      
+
       // Timeout - move to next therapist
       currentTherapistIndex++;
       timeRemaining = 120;
       sendRequestToCurrentTherapist();
     }
   }, 1000);
-  
+
   // Store the interval ID to clear it if needed
   therapistTimeout = countdown;
   console.log('Timer started, interval ID:', countdown);
@@ -884,6 +890,7 @@ function showSimpleConfirmation(therapistName, booking) {
 function stopTherapistAssignment(reason = '') {
   if (!bookingAccepted) {
     bookingAccepted = true;
+    sessionStorage.setItem('bookingAccepted', 'true');
     console.log('Therapist assignment stopped.' + (reason ? ' Reason: ' + reason : ''));
   } else {
     console.log('Therapist assignment already stopped.' + (reason ? ' Reason: ' + reason : ''));
@@ -893,6 +900,17 @@ function stopTherapistAssignment(reason = '') {
     therapistTimeout = null;
     console.log('Therapist timer cleared.');
   }
+}
+
+// --- Check for acceptance from sessionStorage ---
+function checkForAcceptance() {
+  if (sessionStorage.getItem('bookingAccepted') === 'true') {
+    if (!bookingAccepted) {
+      stopTherapistAssignment('Detected acceptance in sessionStorage.');
+    }
+    return true;
+  }
+  return false;
 }
 
 // --- Cross-Tab Acceptance Sync ---
