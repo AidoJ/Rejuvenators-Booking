@@ -210,6 +210,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = elements.create('card');
             document.getElementById('card-element').innerHTML = ''; 
             card.mount('#card-element');
+            
+            // Enable submit button when card details are complete
+            card.on('change', function(event) {
+              const payBtn = document.getElementById('payBtn');
+              if (event.complete) {
+                payBtn.disabled = false;
+                payBtn.style.opacity = '1';
+              } else {
+                payBtn.disabled = true;
+                payBtn.style.opacity = '0.5';
+              }
+            });
           }
         }
       }
@@ -221,33 +233,6 @@ document.addEventListener('DOMContentLoaded', function() {
     attributes: true,
     attributeFilter: ['class']
   });
-  
-  // Test email button
-  const testEmailBtn = document.getElementById('testEmailBtn');
-  if (testEmailBtn) {
-    testEmailBtn.onclick = () => {
-      console.log('Test email button clicked');
-      if (typeof emailjs !== 'undefined') {
-        emailjs.send('service_puww2kb','template_zh8jess', {
-          to_name: 'Test User',
-          to_email: 'aidanleo@yahoo.co.uk',
-          message: 'This is a test email from the booking system - ' + new Date().toLocaleString(),
-          customer_name: 'Test Customer',
-          customer_email: 'test@example.com',
-          customer_phone: '123-456-7890',
-          booking_details: 'Test booking details - ' + new Date().toLocaleString()
-        }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-          console.log('Test email sent successfully:', response);
-          alert('Test email sent successfully! Check console for details.');
-        }).catch(err => {
-          console.error('Test email failed:', err);
-          alert('Test email failed: ' + err.text);
-        });
-      } else {
-        alert('EmailJS not loaded!');
-      }
-    };
-  }
 });
 
 // Haversine distance
@@ -258,10 +243,7 @@ function distance(lat1,lon1,lat2,lon2){
 }
 
 // Booking request simulate - now just proceeds to payment
-document.getElementById('requestBtn').onclick = () => {
-  // Proceed to payment step
-  show('step6');
-};
+// REMOVED - no longer needed since we go directly to payment
 
 // Accept/Decline simulation - these are now handled by URL parameters
 document.getElementById('acceptBtn').onclick=()=>{
@@ -457,12 +439,34 @@ function sendTherapistEmail(therapist) {
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: therapist.name,
       to_email: 'aidanleo@yahoo.co.uk', // For testing
-      message_html: emailHTML,
+      message: summaryText, // Plain text fallback
+      message_html: emailHTML, // HTML version with buttons
+      html_message: emailHTML, // Alternative HTML field
       customer_name: customerName,
       customer_email: customerEmail,
       customer_phone: customerPhone,
       address_for_massage: address,
-      therapist_name: therapist.name
+      therapist_name: therapist.name,
+      accept_link: `${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
+        customerName, customerEmail, customerPhone, address,
+        service: document.getElementById('service').value,
+        duration: document.getElementById('duration').value,
+        date: document.getElementById('date').value,
+        time: document.getElementById('time').value,
+        parking: document.getElementById('parking').value,
+        price: price,
+        therapistName: therapist.name
+      }))}`,
+      decline_link: `${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
+        customerName, customerEmail, customerPhone, address,
+        service: document.getElementById('service').value,
+        duration: document.getElementById('duration').value,
+        date: document.getElementById('date').value,
+        time: document.getElementById('time').value,
+        parking: document.getElementById('parking').value,
+        price: price,
+        therapistName: therapist.name
+      }))}`
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
       console.log('Email sent to therapist:', therapist.name, response);
     }).catch(err => {
@@ -527,7 +531,9 @@ function sendCustomerConfirmationEmail() {
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
       to_email: customerEmail,
+      message: `Thank you ${customerName}! We've received your booking request for ${service} on ${date} at ${time}. We'll be back to you within 10-15 minutes, maximum 2 hours.`,
       message_html: customerEmailHTML,
+      html_message: customerEmailHTML,
       customer_name: customerName,
       customer_email: customerEmail,
       booking_details: `Service: ${service}, Duration: ${duration}min, Date: ${date}, Time: ${time}, Address: ${address}, Price: $${price}`

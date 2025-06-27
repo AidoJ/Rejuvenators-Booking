@@ -12,10 +12,6 @@
 <body>
   <div id="container">
     <h1>Rejuvenators Mobile Massage Booking</h1>
-    <!-- Test Email Button (for debugging) -->
-    <div style="text-align: center; margin-bottom: 20px;">
-      <button id="testEmailBtn" style="background: #ff6b6b; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer;">Test Email Function</button>
-    </div>
     <!-- Step 1: Address -->
     <div id="step1" class="step active">
       <h2>1. Address For Massage</h2>
@@ -79,7 +75,7 @@
       <h2>5. Select Therapist</h2>
       <div id="therapistSelection"></div>
       <button class="btn prev" data-prev="step4">Back</button>
-      <button id="requestBtn" class="btn next" data-next="step6">Request Booking</button>
+      <button class="btn next" data-next="step6">Next</button>
     </div>
     <!-- Step 6: Payment -->
     <div id="step6" class="step">
@@ -88,7 +84,7 @@
       <p style="color: #666; font-size: 14px; margin: 10px 0;">Your card will only be charged after a therapist accepts your booking request.</p>
       <div id="card-element"></div>
       <button class="btn prev" data-prev="step5">Back</button>
-      <button id="payBtn" class="btn primary">Submit Booking Request</button>
+      <button id="payBtn" class="btn primary" disabled>Submit Booking Request</button>
     </div>
     <!-- Step 7: Booking Request (Accept/Decline) -->
     <div id="step7" class="step">
