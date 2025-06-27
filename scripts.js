@@ -343,13 +343,61 @@ document.addEventListener('DOMContentLoaded', function() {
     attributes: true,
     attributeFilter: ['class']
   });
+  
+  // Debug button handler
+  const debugBtn = document.getElementById('debugBtn');
+  if (debugBtn) {
+    debugBtn.onclick = () => {
+      console.log('Debug button clicked - testing therapist assignment...');
+      
+      // Create test booking data
+      const testBooking = {
+        customerName: document.getElementById('customerName').value || 'Test Customer',
+        customerEmail: document.getElementById('customerEmail').value || 'test@example.com',
+        customerPhone: document.getElementById('customerPhone').value || '123-456-7890',
+        address: document.getElementById('address').value || '123 Test St, Brisbane',
+        service: document.getElementById('service').value || 'Stressbuster',
+        duration: document.getElementById('duration').value || '60',
+        date: document.getElementById('date').value || '2024-01-15',
+        time: document.getElementById('time').value || '14:00',
+        parking: document.getElementById('parking').value || 'free',
+        price: calculatePrice() || '159.00',
+        therapistName: selectedTherapistName || 'Test Therapist'
+      };
+      
+      console.log('Test booking data:', testBooking);
+      
+      // Test the Accept functionality
+      const testBookingId = 'test_booking_' + Date.now();
+      const testBookingData = encodeURIComponent(JSON.stringify({
+        n: testBooking.customerName,
+        e: testBooking.customerEmail,
+        p: testBooking.customerPhone,
+        a: testBooking.address,
+        s: testBooking.service,
+        d: testBooking.duration,
+        dt: testBooking.date,
+        tm: testBooking.time,
+        pk: testBooking.parking,
+        pr: testBooking.price,
+        tn: testBooking.therapistName
+      }));
+      
+      // Simulate Accept action
+      handleTherapistResponse('accept', testBooking.therapistName, testBookingData, testBookingId);
+    };
+  }
 });
 
 // Handle therapist response from URL
 function handleTherapistResponse(action, therapistName, bookingData, receivedBookingId) {
+  console.log('handleTherapistResponse called with:', { action, therapistName, bookingData, receivedBookingId });
+  
   try {
     // Check if this booking has already been accepted
     const acceptedBookingId = localStorage.getItem('acceptedBookingId');
+    console.log('Checking for existing acceptance. Stored ID:', acceptedBookingId, 'Received ID:', receivedBookingId);
+    
     if (acceptedBookingId === receivedBookingId) {
       console.log('This booking has already been accepted');
       showAlreadyAcceptedMessage();
@@ -357,6 +405,7 @@ function handleTherapistResponse(action, therapistName, bookingData, receivedBoo
     }
     
     const booking = JSON.parse(decodeURIComponent(bookingData));
+    console.log('Parsed booking data:', booking);
     
     // Convert compact format to full format for compatibility
     const fullBooking = {
@@ -373,7 +422,11 @@ function handleTherapistResponse(action, therapistName, bookingData, receivedBoo
       therapistName: booking.therapistName || booking.tn
     };
     
+    console.log('Full booking object:', fullBooking);
+    
     if (action === 'accept') {
+      console.log('Processing ACCEPT action...');
+      
       // Store the accepted booking ID to prevent duplicate acceptances
       localStorage.setItem('acceptedBookingId', receivedBookingId);
       bookingAccepted = true;
@@ -384,13 +437,18 @@ function handleTherapistResponse(action, therapistName, bookingData, receivedBoo
       sendCustomerConfirmationEmail(fullBooking, therapistName);
       
       // Show confirmation
+      console.log('Showing confirmation page...');
       showSimpleConfirmation(therapistName, fullBooking);
     } else if (action === 'decline') {
+      console.log('Processing DECLINE action...');
       // Show decline message
       showDeclineMessage(therapistName);
+    } else {
+      console.log('Unknown action:', action);
     }
   } catch (e) {
     console.error('Error parsing booking data:', e);
+    console.error('Raw booking data:', bookingData);
   }
 }
 
@@ -523,6 +581,30 @@ function startTherapistAssignment() {
   timeRemaining = 120;
   isInFallbackMode = false;
   show('step7');
+  
+  // Send customer acknowledgment email
+  const customerName = document.getElementById('customerName').value;
+  const customerEmail = document.getElementById('customerEmail').value;
+  const customerPhone = document.getElementById('customerPhone').value;
+  const address = document.getElementById('address').value;
+  const price = calculatePrice();
+  
+  const bookingData = {
+    customerName: customerName,
+    customerEmail: customerEmail,
+    customerPhone: customerPhone,
+    address: address,
+    service: document.getElementById('service').value,
+    duration: document.getElementById('duration').value,
+    date: document.getElementById('date').value,
+    time: document.getElementById('time').value,
+    parking: document.getElementById('parking').value,
+    price: price,
+    therapistName: selectedTherapistName
+  };
+  
+  // Send acknowledgment email to customer
+  sendCustomerAcknowledgmentEmail(bookingData);
   
   // Update the UI to show we're contacting the selected therapist
   document.getElementById('requestMsg').innerText = `Sending request to ${selectedTherapistName}...`;
@@ -679,6 +761,91 @@ function sendTherapistEmail(therapist) {
   });
 }
 
+// Send admin notification (placeholder for now)
+function sendAdminNotification(booking, therapistName) {
+  console.log('Admin notification would be sent here for booking:', booking);
+  // This could be used to notify admin of accepted bookings
+}
+
+// Send customer acknowledgment email when booking request is submitted
+function sendCustomerAcknowledgmentEmail(booking) {
+  console.log('Sending customer acknowledgment email...');
+
+  const customerName = booking.customerName;
+  const customerEmail = booking.customerEmail;
+
+  const acknowledgmentHTML = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+        <h1 style="color: #00729B; margin-bottom: 10px;">Booking Request Submitted</h1>
+        <p style="color: #666; font-size: 16px;">We're finding the perfect therapist for you</p>
+      </div>
+      
+      <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2196f3;">
+        <h3 style="color: #1976d2; margin-top: 0;">📋 Your booking request has been submitted!</h3>
+        <p>We're currently contacting available therapists in your area. You'll receive a confirmation email as soon as a therapist accepts your booking.</p>
+      </div>
+      
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Your Details</h3>
+        <p><strong>Name:</strong> ${customerName}</p>
+        <p><strong>Email:</strong> ${customerEmail}</p>
+      </div>
+      
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Booking Details</h3>
+        <p><strong>Address For Massage:</strong> ${booking.address}</p>
+        <p><strong>Service:</strong> ${booking.service}</p>
+        <p><strong>Duration:</strong> ${booking.duration} min</p>
+        <p><strong>Date:</strong> ${booking.date}</p>
+        <p><strong>Time:</strong> ${booking.time}</p>
+        <p><strong>Parking:</strong> ${booking.parking}</p>
+        <p><strong>Total Price:</strong> $${booking.price}</p>
+      </div>
+      
+      <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107;">
+        <p style="margin: 0; color: #856404;"><strong>Payment Information:</strong> Your card details have been securely stored and will only be charged once a therapist accepts your booking.</p>
+      </div>
+      
+      <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+        <h3 style="color: #28a745; margin-top: 0;">What happens next?</h3>
+        <p>1. We'll contact available therapists in your area<br>
+           2. The first therapist to respond will be assigned to your booking<br>
+           3. You'll receive a confirmation email with all the details<br>
+           4. Your payment will be processed automatically</p>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
+        <p><strong>Rejuvenators Mobile Massage</strong></p>
+        <p>Bringing wellness to your doorstep</p>
+        <p style="font-size: 12px;">If you have any questions, please don't hesitate to contact us</p>
+      </div>
+    </div>
+  `;
+
+  if (typeof emailjs !== 'undefined' && emailjs.init) {
+    console.log('Attempting to send customer acknowledgment email...');
+    emailjs.send('service_puww2kb','template_zh8jess', {
+      to_name: customerName,
+      to_email: customerEmail,
+      message: `Your booking request has been submitted! We're finding a therapist for your ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`, // Plain text fallback
+      message_html: acknowledgmentHTML,
+      html_message: acknowledgmentHTML,
+      html_content: acknowledgmentHTML,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
+    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+      console.log('Customer acknowledgment email sent successfully:', response);
+    }).catch(err => {
+      console.error('Customer acknowledgment email failed:', err);
+    });
+  } else {
+    console.error('EmailJS not available for customer acknowledgment email');
+  }
+}
+
 // Send confirmation email to customer - now includes therapist name
 function sendCustomerConfirmationEmail(booking, therapistName) {
   console.log('Sending customer confirmation email...');
@@ -686,9 +853,9 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
   const customerName = booking.customerName;
   const customerEmail = booking.customerEmail;
 
-  // Updated HTML to include therapist information and match the therapist email style
+  // Updated HTML to match the therapist email style with better formatting
   const customerEmailHTML = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
         <h1 style="color: #28a745; margin-bottom: 10px;">Booking Confirmed!</h1>
