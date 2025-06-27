@@ -233,6 +233,28 @@ document.addEventListener('DOMContentLoaded', function() {
     attributes: true,
     attributeFilter: ['class']
   });
+  
+  // Debug button (temporary)
+  const debugBtn = document.getElementById('debugBtn');
+  if (debugBtn) {
+    debugBtn.onclick = () => {
+      console.log('Debug button clicked');
+      console.log('Available therapists:', availableTherapists);
+      console.log('Current therapist index:', currentTherapistIndex);
+      
+      // Simulate some test data if no therapists available
+      if (availableTherapists.length === 0) {
+        console.log('No therapists available, creating test data...');
+        availableTherapists = [
+          { name: 'Test Therapist 1', distance: 2.5, lat: -33.8688, lon: 151.2093 },
+          { name: 'Test Therapist 2', distance: 5.1, lat: -33.8688, lon: 151.2093 }
+        ];
+      }
+      
+      // Test the therapist assignment process
+      startTherapistAssignment();
+    };
+  }
 });
 
 // Haversine distance
@@ -337,22 +359,35 @@ document.getElementById('payBtn').onclick=()=>{
 
 // Start the therapist assignment process
 function startTherapistAssignment() {
+  console.log('Starting therapist assignment process...');
+  console.log('Available therapists:', availableTherapists);
+  
   currentTherapistIndex = 0;
   timeRemaining = 120;
   show('step7');
-  sendRequestToCurrentTherapist();
+  
+  // Add a small delay to ensure step 7 is visible
+  setTimeout(() => {
+    sendRequestToCurrentTherapist();
+  }, 500);
 }
 
 // Send request to current therapist
 function sendRequestToCurrentTherapist() {
+  console.log('Sending request to therapist index:', currentTherapistIndex);
+  console.log('Available therapists length:', availableTherapists.length);
+  
   if (currentTherapistIndex >= availableTherapists.length) {
     // No more therapists available
+    console.log('No more therapists available');
     document.getElementById('requestMsg').innerText = 'No therapists available. Your payment will be refunded.';
     document.getElementById('therapistStatus').innerHTML = '<p style="color: red;">No therapists responded in time.</p>';
     return;
   }
 
   const currentTherapist = availableTherapists[currentTherapistIndex];
+  console.log('Current therapist:', currentTherapist);
+  
   document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi)`;
   
   // Send email to current therapist
@@ -360,21 +395,51 @@ function sendRequestToCurrentTherapist() {
   
   // Send confirmation email to customer (only on first therapist)
   if (currentTherapistIndex === 0) {
+    console.log('Sending customer confirmation email...');
     sendCustomerConfirmationEmail();
   }
   
   // Start countdown timer
+  console.log('Starting countdown timer...');
   startCountdown();
 }
 
 // Send email to therapist
 function sendTherapistEmail(therapist) {
+  console.log('Sending email to therapist:', therapist.name);
+  
   const price = calculatePrice();
   const customerName = document.getElementById('customerName').value;
   const customerEmail = document.getElementById('customerEmail').value;
   const customerPhone = document.getElementById('customerPhone').value;
   const address = document.getElementById('address').value;
   
+  console.log('Email data:', {
+    therapist: therapist.name,
+    customerName,
+    customerEmail,
+    customerPhone,
+    address,
+    price
+  });
+  
+  const summaryText =
+    `NEW BOOKING REQUEST\n\n` +
+    `Customer Details:\n` +
+    `Name: ${customerName}\n` +
+    `Email: ${customerEmail}\n` +
+    `Phone: ${customerPhone}\n\n` +
+    `Booking Details:\n` +
+    `Address For Massage: ${address}\n` +
+    `Service: ${document.getElementById('service').value}\n` +
+    `Duration: ${document.getElementById('duration').value} min\n` +
+    `Date: ${document.getElementById('date').value}\n` +
+    `Time: ${document.getElementById('time').value}\n` +
+    `Parking: ${document.getElementById('parking').value}\n` +
+    `Total Price: $${price}\n\n` +
+    `Please respond to this booking request by clicking one of the buttons below:`;
+
+  // Create HTML email with buttons
   const emailHTML = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
       <h2 style="color: #00729B; text-align: center;">NEW BOOKING REQUEST</h2>
@@ -435,7 +500,11 @@ function sendTherapistEmail(therapist) {
     </div>
   `;
 
+  console.log('EmailJS available:', typeof emailjs !== 'undefined');
+  console.log('EmailJS init available:', typeof emailjs !== 'undefined' && emailjs.init);
+
   if (typeof emailjs !== 'undefined' && emailjs.init) {
+    console.log('Attempting to send therapist email...');
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: therapist.name,
       to_email: 'aidanleo@yahoo.co.uk', // For testing
@@ -468,15 +537,19 @@ function sendTherapistEmail(therapist) {
         therapistName: therapist.name
       }))}`
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Email sent to therapist:', therapist.name, response);
+      console.log('Email sent to therapist successfully:', therapist.name, response);
     }).catch(err => {
       console.error('Email failed for therapist:', therapist.name, err);
     });
+  } else {
+    console.error('EmailJS not available for therapist email');
   }
 }
 
 // Send confirmation email to customer
 function sendCustomerConfirmationEmail() {
+  console.log('Sending customer confirmation email...');
+  
   const customerName = document.getElementById('customerName').value;
   const customerEmail = document.getElementById('customerEmail').value;
   const address = document.getElementById('address').value;
@@ -485,6 +558,17 @@ function sendCustomerConfirmationEmail() {
   const date = document.getElementById('date').value;
   const time = document.getElementById('time').value;
   const price = calculatePrice();
+  
+  console.log('Customer email data:', {
+    customerName,
+    customerEmail,
+    address,
+    service,
+    duration,
+    date,
+    time,
+    price
+  });
   
   const customerEmailHTML = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
@@ -527,10 +611,14 @@ function sendCustomerConfirmationEmail() {
     </div>
   `;
 
+  console.log('EmailJS available for customer email:', typeof emailjs !== 'undefined');
+  console.log('EmailJS init available for customer email:', typeof emailjs !== 'undefined' && emailjs.init);
+
   if (typeof emailjs !== 'undefined' && emailjs.init) {
+    console.log('Attempting to send customer confirmation email...');
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
-      to_email: customerEmail,
+      to_email: customerEmail, // Send to customer's actual email
       message: `Thank you ${customerName}! We've received your booking request for ${service} on ${date} at ${time}. We'll be back to you within 10-15 minutes, maximum 2 hours.`,
       message_html: customerEmailHTML,
       html_message: customerEmailHTML,
@@ -542,18 +630,33 @@ function sendCustomerConfirmationEmail() {
     }).catch(err => {
       console.error('Customer confirmation email failed:', err);
     });
+  } else {
+    console.error('EmailJS not available for customer email');
   }
 }
 
 // Start countdown timer
 function startCountdown() {
+  console.log('Starting countdown timer with timeRemaining:', timeRemaining);
+  
   const timerElement = document.getElementById('timeRemaining');
+  if (!timerElement) {
+    console.error('Timer element not found!');
+    return;
+  }
+  
+  // Clear any existing timer
+  if (therapistTimeout) {
+    clearInterval(therapistTimeout);
+  }
   
   const countdown = setInterval(() => {
     timeRemaining--;
+    console.log('Timer tick:', timeRemaining);
     timerElement.textContent = `${timeRemaining} seconds`;
     
     if (timeRemaining <= 0) {
+      console.log('Timer expired, moving to next therapist');
       clearInterval(countdown);
       // Timeout - move to next therapist
       currentTherapistIndex++;
@@ -564,6 +667,7 @@ function startCountdown() {
   
   // Store the interval ID to clear it if needed
   therapistTimeout = countdown;
+  console.log('Timer started, interval ID:', countdown);
 }
 
 // Process payment after acceptance
