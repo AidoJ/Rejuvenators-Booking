@@ -198,24 +198,15 @@ document.addEventListener('DOMContentLoaded', function() {
       };
       
       if (action === 'accept') {
-        // Set flag to prevent sending emails to other therapists
         bookingAccepted = true;
+        if (therapistTimeout) clearInterval(therapistTimeout);
         console.log('Booking accepted by', therapistName, '- stopping further therapist emails');
-        
-        // Send admin notification
         sendAdminNotification(fullBooking, therapistName);
-        
-        // Show simple confirmation page
         showSimpleConfirmation(therapistName, fullBooking);
       } else if (action === 'decline') {
-        // Show decline message and move to next therapist
         document.getElementById('requestMsg').innerText = `${therapistName} declined. Trying next therapist...`;
         show('step7');
-        // Clear any existing timeout
-        if (therapistTimeout) {
-          clearInterval(therapistTimeout);
-        }
-        // Move to next therapist after a short delay
+        if (therapistTimeout) clearInterval(therapistTimeout);
         setTimeout(() => {
           currentTherapistIndex++;
           timeRemaining = 120;
@@ -493,13 +484,14 @@ function sendRequestToCurrentTherapist() {
   console.log('Sending request to therapist index:', currentTherapistIndex);
   console.log('Available therapists length:', availableTherapists.length);
   console.log('Booking accepted flag:', bookingAccepted);
-  
-  // Check if booking has already been accepted - CRITICAL CHECK
+
+  // Bulletproof check: stop if already accepted
   if (bookingAccepted) {
     console.log('Booking already accepted, stopping therapist assignment immediately');
+    if (therapistTimeout) clearInterval(therapistTimeout);
     return;
   }
-  
+
   if (currentTherapistIndex >= availableTherapists.length) {
     // No more therapists available
     console.log('No more therapists available');
@@ -510,24 +502,25 @@ function sendRequestToCurrentTherapist() {
 
   const currentTherapist = availableTherapists[currentTherapistIndex];
   console.log('Current therapist:', currentTherapist);
-  
+
   // Final check before sending email
   if (bookingAccepted) {
     console.log('Booking accepted just before sending email, aborting');
+    if (therapistTimeout) clearInterval(therapistTimeout);
     return;
   }
-  
+
   document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi)`;
-  
+
   // Send email to current therapist
   sendTherapistEmail(currentTherapist);
-  
+
   // Send confirmation email to customer (only on first therapist)
   if (currentTherapistIndex === 0) {
     console.log('Sending customer confirmation email...');
     sendCustomerConfirmationEmail();
   }
-  
+
   // Start countdown timer
   console.log('Starting countdown timer...');
   startCountdown();
@@ -536,13 +529,13 @@ function sendRequestToCurrentTherapist() {
 // Send email to therapist
 function sendTherapistEmail(therapist) {
   console.log('Sending email to therapist:', therapist.name);
-  
+
   const price = calculatePrice();
   const customerName = document.getElementById('customerName').value;
   const customerEmail = document.getElementById('customerEmail').value;
   const customerPhone = document.getElementById('customerPhone').value;
   const address = document.getElementById('address').value;
-  
+
   const acceptUrl = `${window.location.origin}${window.location.pathname}?a=accept&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
     n: customerName, e: customerEmail, p: customerPhone, a: address,
     s: document.getElementById('service').value, d: document.getElementById('duration').value,
@@ -556,7 +549,7 @@ function sendTherapistEmail(therapist) {
     pk: document.getElementById('parking').value, pr: price, tn: therapist.name
   }))}`;
 
-  // Plain text fallback
+  // Plain text fallback (no hyperlinks)
   const summaryText =
     `NEW BOOKING REQUEST\n\n` +
     `Customer Details:\n` +
@@ -600,6 +593,7 @@ function sendTherapistEmail(therapist) {
   // Final check before sending therapist email
   if (bookingAccepted) {
     console.log('Booking already accepted, not sending therapist email');
+    if (therapistTimeout) clearInterval(therapistTimeout);
     return;
   }
 
@@ -627,7 +621,7 @@ function sendTherapistEmail(therapist) {
 // Send confirmation email to customer
 function sendCustomerConfirmationEmail() {
   console.log('Sending customer confirmation email...');
-  
+
   const customerName = document.getElementById('customerName').value;
   const customerEmail = document.getElementById('customerEmail').value;
   const address = document.getElementById('address').value;
@@ -637,17 +631,6 @@ function sendCustomerConfirmationEmail() {
   const time = document.getElementById('time').value;
   const price = calculatePrice();
   const parking = document.getElementById('parking').value;
-
-  console.log('Customer email data:', {
-    customerName,
-    customerEmail,
-    address,
-    service,
-    duration,
-    date,
-    time,
-    price
-  });
 
   // Updated HTML to match therapist email look and feel
   const customerEmailHTML = `
@@ -688,7 +671,7 @@ function sendCustomerConfirmationEmail() {
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
       to_email: customerEmail, // Send to customer's actual email
-      message: `Thank you ${customerName}! We've received your booking request for ${service} on ${date} at ${time}. We'll be back to you within 10-15 minutes, maximum 2 hours.`,
+      message: '', // No plain text, only HTML
       message_html: customerEmailHTML,
       html_message: customerEmailHTML,
       html_content: customerEmailHTML,
