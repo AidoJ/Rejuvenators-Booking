@@ -1,5 +1,16 @@
 // Autocomplete initialization
 let autocomplete, current='step1', currentLat, currentLon, selectedTherapistInfo;
+
+// Initialize EmailJS
+function initEmailJS() {
+  if (typeof emailjs !== 'undefined') {
+    emailjs.init('V8qq2pjH8vfh3a6q3');
+    console.log('EmailJS initialized successfully');
+  } else {
+    console.log('EmailJS not loaded');
+  }
+}
+
 function initAutocomplete() {
   autocomplete = new google.maps.places.Autocomplete(
     document.getElementById('address'), { componentRestrictions:{country:'au'} }
@@ -32,6 +43,30 @@ function updatePriceDisplay() {
 
 // Add event listeners for price updates
 document.addEventListener('DOMContentLoaded', function() {
+  // Initialize EmailJS
+  initEmailJS();
+  
+  // Test EmailJS functionality
+  setTimeout(() => {
+    if (typeof emailjs !== 'undefined') {
+      console.log('Testing EmailJS...');
+      // Simple test email
+      emailjs.send('service_puww2kb','template_zh8jess', {
+        to_name: 'Test',
+        to_email: 'aidanleo@yahoo.co.uk',
+        message: 'This is a test email from the booking system',
+        customer_name: 'Test Customer',
+        customer_email: 'test@example.com',
+        customer_phone: '123-456-7890',
+        booking_details: 'Test booking details'
+      }).then((response) => {
+        console.log('Test email sent successfully:', response);
+      }).catch(err => {
+        console.error('Test email failed:', err);
+      });
+    }
+  }, 2000);
+  
   const durationSelect = document.getElementById('duration');
   const parkingSelect = document.getElementById('parking');
   const dateInput = document.getElementById('date');
@@ -144,6 +179,33 @@ document.addEventListener('DOMContentLoaded', function() {
     attributes: true,
     attributeFilter: ['class']
   });
+  
+  // Test email button
+  const testEmailBtn = document.getElementById('testEmailBtn');
+  if (testEmailBtn) {
+    testEmailBtn.onclick = () => {
+      console.log('Test email button clicked');
+      if (typeof emailjs !== 'undefined') {
+        emailjs.send('service_puww2kb','template_zh8jess', {
+          to_name: 'Test User',
+          to_email: 'aidanleo@yahoo.co.uk',
+          message: 'This is a test email from the booking system - ' + new Date().toLocaleString(),
+          customer_name: 'Test Customer',
+          customer_email: 'test@example.com',
+          customer_phone: '123-456-7890',
+          booking_details: 'Test booking details - ' + new Date().toLocaleString()
+        }).then((response) => {
+          console.log('Test email sent successfully:', response);
+          alert('Test email sent successfully! Check console for details.');
+        }).catch(err => {
+          console.error('Test email failed:', err);
+          alert('Test email failed: ' + err.text);
+        });
+      } else {
+        alert('EmailJS not loaded!');
+      }
+    };
+  }
 });
 
 // Haversine distance
@@ -215,7 +277,6 @@ document.getElementById('requestBtn').onclick = () => {
   // Try to send via EmailJS if configured, otherwise simulate success
   if (typeof emailjs !== 'undefined' && emailjs.init) {
     console.log('EmailJS is available, attempting to send email...');
-    emailjs.init('V8qq2pjH8vfh3a6q3');
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: selectedTherapistInfo.name,
       to_email: 'aidanleo@yahoo.co.uk', // Updated email address
