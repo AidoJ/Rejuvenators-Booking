@@ -49,17 +49,38 @@ function distance(lat1,lon1,lat2,lon2){
 }
 
 // Booking request simulate
-document.getElementById('requestBtn').onclick=()=>{
-  const sel=document.getElementById('therapistSelect').value;
-  selectedTherapistInfo=JSON.parse(sel);
-  emailjs.init('V8qq2pjH8vfh3a6q3');
-  emailjs.send('service_puww2kb','template_zh8jess',{
+document.getElementById('requestBtn').onclick = () => {
+  // 1. Calculate price
+  const price = calculatePrice();
+
+  // 2. Build a summary (you can also inject this into your UI if you like)
+  const summaryText =
+    `Booking Request:\n` +
+    `Service: ${document.getElementById('service').value}\n` +
+    `Duration: ${document.getElementById('duration').value} min\n` +
+    `Date & Time: ${document.getElementById('date').value} ${document.getElementById('time').value}\n` +
+    `Total: $${price}`;
+
+  // 3. Grab the selected therapist
+  const sel = document.getElementById('therapistSelect').value;
+  selectedTherapistInfo = JSON.parse(sel);
+
+  // 4. Send email to Jane’s test address
+  emailjs.init('YOUR_EMAILJS_PUBLIC_KEY');
+  emailjs.send('YOUR_SERVICE_ID','YOUR_TEMPLATE_ID', {
     to_name: selectedTherapistInfo.name,
-    to_email: selectedTherapistInfo.email,
-    message:'New booking request for '+document.getElementById('custName').value
+    to_email: 'aishizhenjing@gmail.com', // Jane’s test email
+    message: summaryText
+  }).then(() => {
+    console.log('Booking request email sent');
+    document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
+    show('step5');
+  }).catch(err => {
+    console.error('EmailJS error:', err);
+    alert('Failed to send booking request email.');
   });
-  show('step5');
 };
+
 
 // Accept/Decline simulation
 document.getElementById('acceptBtn').onclick=()=>{
