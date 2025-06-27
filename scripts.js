@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (action === 'accept') {
         bookingAccepted = true;
         if (therapistTimeout) clearInterval(therapistTimeout);
-        console.log('Booking accepted by', therapistName, '- stopping further therapist emails');
+        console.log('Booking accepted by', therapistName, '- stopping further therapist emails and timers');
         sendAdminNotification(fullBooking, therapistName);
         showSimpleConfirmation(therapistName, fullBooking);
       } else if (action === 'decline') {
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         if (availableTherapists.length === 0) {
-          selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Unfortunately we don\'t have any therapists available in your area right now.</p>';
+          selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Unfortunately we\'re don\'t have any therapists available in your area right now.</p>';
           // Disable the request button
           const requestBtn = document.getElementById('requestBtn');
           if (requestBtn) {
@@ -530,6 +530,13 @@ function sendRequestToCurrentTherapist() {
 function sendTherapistEmail(therapist) {
   console.log('Sending email to therapist:', therapist.name);
 
+  // Bulletproof check
+  if (bookingAccepted) {
+    console.log('Booking already accepted, not sending therapist email');
+    if (therapistTimeout) clearInterval(therapistTimeout);
+    return;
+  }
+
   const price = calculatePrice();
   const customerName = document.getElementById('customerName').value;
   const customerEmail = document.getElementById('customerEmail').value;
@@ -569,7 +576,7 @@ function sendTherapistEmail(therapist) {
     `DECLINE: ${declineUrl}\n` +
     `You have 120 seconds to respond before this request is sent to another therapist.`;
 
-  // HTML version with hyperlinks
+  // HTML version with hyperlinks, larger, bold, ALL CAPS
   const simpleEmailHTML = `
     <h2>NEW BOOKING REQUEST</h2>
     <p><strong>Customer:</strong> ${customerName}</p>
@@ -584,18 +591,11 @@ function sendTherapistEmail(therapist) {
     <br>
     <p><strong>Please respond within 120 seconds:</strong></p>
     <p>
-      <a href="${acceptUrl}" style="color: #28a745; text-decoration: underline; font-weight: bold;">Accept</a>
+      <a href="${acceptUrl}" style="font-size: 22px; color: #28a745; text-decoration: underline; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">ACCEPT</a>
       &nbsp;|&nbsp;
-      <a href="${declineUrl}" style="color: #dc3545; text-decoration: underline; font-weight: bold;">Decline</a>
+      <a href="${declineUrl}" style="font-size: 22px; color: #dc3545; text-decoration: underline; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;">DECLINE</a>
     </p>
   `;
-
-  // Final check before sending therapist email
-  if (bookingAccepted) {
-    console.log('Booking already accepted, not sending therapist email');
-    if (therapistTimeout) clearInterval(therapistTimeout);
-    return;
-  }
 
   emailjs.send('service_puww2kb','template_zh8jess', {
     to_name: therapist.name,
@@ -704,7 +704,7 @@ function startCountdown() {
   }
   
   const countdown = setInterval(() => {
-    // Check if booking has been accepted during countdown
+    // Bulletproof check
     if (bookingAccepted) {
       console.log('Booking accepted during countdown, stopping timer immediately');
       clearInterval(countdown);
