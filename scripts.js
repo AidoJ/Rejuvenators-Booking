@@ -277,6 +277,19 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
   
+  // When user clicks Request Booking, use the selected therapist
+  const requestBtn = document.getElementById('requestBtn');
+  if (requestBtn) {
+    requestBtn.onclick = () => {
+      const sel = document.getElementById('therapistSelect');
+      if (sel && sel.value) {
+        // Only use the selected therapist
+        availableTherapists = [JSON.parse(sel.value)];
+      }
+      startTherapistAssignment();
+    };
+  }
+  
   // Step6 summary and stripe setup - this should trigger when entering step 6
   const observer = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
@@ -530,15 +543,20 @@ function sendTherapistEmail(therapist) {
   const customerPhone = document.getElementById('customerPhone').value;
   const address = document.getElementById('address').value;
   
-  console.log('Email data:', {
-    therapist: therapist.name,
-    customerName,
-    customerEmail,
-    customerPhone,
-    address,
-    price
-  });
-  
+  const acceptUrl = `${window.location.origin}${window.location.pathname}?a=accept&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
+    n: customerName, e: customerEmail, p: customerPhone, a: address,
+    s: document.getElementById('service').value, d: document.getElementById('duration').value,
+    dt: document.getElementById('date').value, tm: document.getElementById('time').value,
+    pk: document.getElementById('parking').value, pr: price, tn: therapist.name
+  }))}`;
+  const declineUrl = `${window.location.origin}${window.location.pathname}?a=decline&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
+    n: customerName, e: customerEmail, p: customerPhone, a: address,
+    s: document.getElementById('service').value, d: document.getElementById('duration').value,
+    dt: document.getElementById('date').value, tm: document.getElementById('time').value,
+    pk: document.getElementById('parking').value, pr: price, tn: therapist.name
+  }))}`;
+
+  // Plain text fallback
   const summaryText =
     `NEW BOOKING REQUEST\n\n` +
     `Customer Details:\n` +
@@ -554,161 +572,56 @@ function sendTherapistEmail(therapist) {
     `Parking: ${document.getElementById('parking').value}\n` +
     `Total Price: $${price}\n\n` +
     `Please respond to this booking request within 120 seconds:\n\n` +
-    `ACCEPT: ${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-      customerName, customerEmail, customerPhone, address,
-      service: document.getElementById('service').value,
-      duration: document.getElementById('duration').value,
-      date: document.getElementById('date').value,
-      time: document.getElementById('time').value,
-      parking: document.getElementById('parking').value,
-      price: price,
-      therapistName: therapist.name
-    }))}\n\n` +
-    `DECLINE: ${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-      customerName, customerEmail, customerPhone, address,
-      service: document.getElementById('service').value,
-      duration: document.getElementById('duration').value,
-      date: document.getElementById('date').value,
-      time: document.getElementById('time').value,
-      parking: document.getElementById('parking').value,
-      price: price,
-      therapistName: therapist.name
-    }))}\n\n` +
+    `ACCEPT: ${acceptUrl}\n` +
+    `DECLINE: ${declineUrl}\n` +
     `You have 120 seconds to respond before this request is sent to another therapist.`;
 
-  // Create HTML email with buttons
-  const emailHTML = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-      <h2 style="color: #00729B; text-align: center;">NEW BOOKING REQUEST</h2>
-      
-      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-        <h3 style="color: #005f7d; margin-top: 0;">Customer Details</h3>
-        <p><strong>Name:</strong> ${customerName}</p>
-        <p><strong>Email:</strong> ${customerEmail}</p>
-        <p><strong>Phone:</strong> ${customerPhone}</p>
-      </div>
-      
-      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-        <h3 style="color: #005f7d; margin-top: 0;">Booking Details</h3>
-        <p><strong>Address For Massage:</strong> ${address}</p>
-        <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
-        <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
-        <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
-        <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
-        <p><strong>Parking:</strong> ${document.getElementById('parking').value}</p>
-        <p><strong>Total Price:</strong> $${price}</p>
-      </div>
-      
-      <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107;">
-        <p style="margin: 0; color: #856404;"><strong>Payment Information:</strong> Customer's payment details have been collected. Payment will be processed automatically when you accept this booking.</p>
-      </div>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <p style="font-size: 16px; color: #333;">Please respond to this booking request within 120 seconds:</p>
-        <div style="margin: 20px 0;">
-          <p style="margin: 10px 0;">
-            <a href="${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-              customerName, customerEmail, customerPhone, address,
-              service: document.getElementById('service').value,
-              duration: document.getElementById('duration').value,
-              date: document.getElementById('date').value,
-              time: document.getElementById('time').value,
-              parking: document.getElementById('parking').value,
-              price: price,
-              therapistName: therapist.name
-            }))}" style="color: #28a745; text-decoration: none; font-weight: bold; font-size: 18px;">ACCEPT</a>
-          </p>
-          
-          <p style="margin: 10px 0;">
-            <a href="${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
-              customerName, customerEmail, customerPhone, address,
-              service: document.getElementById('service').value,
-              duration: document.getElementById('duration').value,
-              date: document.getElementById('date').value,
-              time: document.getElementById('time').value,
-              parking: document.getElementById('parking').value,
-              price: price,
-              therapistName: therapist.name
-            }))}" style="color: #dc3545; text-decoration: none; font-weight: bold; font-size: 18px;">DECLINE</a>
-          </p>
-        </div>
-      </div>
-      
-      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
-        <p>This booking request was sent from the Rejuvenators Mobile Massage Booking System</p>
-        <p><strong>You have 120 seconds to respond before this request is sent to another therapist.</strong></p>
-      </div>
-    </div>
+  // HTML version with hyperlinks
+  const simpleEmailHTML = `
+    <h2>NEW BOOKING REQUEST</h2>
+    <p><strong>Customer:</strong> ${customerName}</p>
+    <p><strong>Email:</strong> ${customerEmail}</p>
+    <p><strong>Phone:</strong> ${customerPhone}</p>
+    <p><strong>Address:</strong> ${address}</p>
+    <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
+    <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
+    <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
+    <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
+    <p><strong>Price:</strong> $${price}</p>
+    <br>
+    <p><strong>Please respond within 120 seconds:</strong></p>
+    <p>
+      <a href="${acceptUrl}" style="color: #28a745; text-decoration: underline; font-weight: bold;">Accept</a>
+      &nbsp;|&nbsp;
+      <a href="${declineUrl}" style="color: #dc3545; text-decoration: underline; font-weight: bold;">Decline</a>
+    </p>
   `;
 
-  console.log('EmailJS available:', typeof emailjs !== 'undefined');
-  console.log('EmailJS init available:', typeof emailjs !== 'undefined' && emailjs.init);
-  console.log('Email HTML content:', emailHTML);
-
-  if (typeof emailjs !== 'undefined' && emailjs.init) {
-    console.log('Attempting to send therapist email...');
-    
-    // Create a simpler email format that should work better
-    const acceptUrl = `${window.location.origin}${window.location.pathname}?a=accept&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
-      n: customerName, e: customerEmail, p: customerPhone, a: address,
-      s: document.getElementById('service').value, d: document.getElementById('duration').value,
-      dt: document.getElementById('date').value, tm: document.getElementById('time').value,
-      pk: document.getElementById('parking').value, pr: price, tn: therapist.name
-    }))}`;
-    const declineUrl = `${window.location.origin}${window.location.pathname}?a=decline&t=${encodeURIComponent(therapist.name)}&b=${encodeURIComponent(JSON.stringify({
-      n: customerName, e: customerEmail, p: customerPhone, a: address,
-      s: document.getElementById('service').value, d: document.getElementById('duration').value,
-      dt: document.getElementById('date').value, tm: document.getElementById('time').value,
-      pk: document.getElementById('parking').value, pr: price, tn: therapist.name
-    }))}`;
-    const simpleEmailHTML = `
-      <h2>NEW BOOKING REQUEST</h2>
-      <p><strong>Customer:</strong> ${customerName}</p>
-      <p><strong>Email:</strong> ${customerEmail}</p>
-      <p><strong>Phone:</strong> ${customerPhone}</p>
-      <p><strong>Address:</strong> ${address}</p>
-      <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
-      <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
-      <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
-      <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
-      <p><strong>Price:</strong> $${price}</p>
-      <br>
-      <p><strong>Please respond within 120 seconds:</strong></p>
-      <p>
-        <a href="${acceptUrl}" style="color: #28a745; text-decoration: underline; font-weight: bold;">Accept</a>
-        &nbsp;|&nbsp;
-        <a href="${declineUrl}" style="color: #dc3545; text-decoration: underline; font-weight: bold;">Decline</a>
-      </p>
-    `;
-    
-    // Final check before sending therapist email
-    if (bookingAccepted) {
-      console.log('Booking already accepted, not sending therapist email');
-      return;
-    }
-    
-    emailjs.send('service_puww2kb','template_zh8jess', {
-      to_name: therapist.name,
-      to_email: 'aidanleo@yahoo.co.uk', // For testing
-      message: summaryText, // Plain text fallback
-      message_html: simpleEmailHTML, // Use simpler HTML
-      html_message: simpleEmailHTML, // Alternative HTML field
-      html_content: simpleEmailHTML, // Another HTML field name
-      customer_name: customerName,
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      address_for_massage: address,
-      therapist_name: therapist.name,
-      accept_link: acceptUrl,
-      decline_link: declineUrl
-    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Email sent to therapist successfully:', therapist.name, response);
-    }).catch(err => {
-      console.error('Email failed for therapist:', therapist.name, err);
-    });
-  } else {
-    console.error('EmailJS not available for therapist email');
+  // Final check before sending therapist email
+  if (bookingAccepted) {
+    console.log('Booking already accepted, not sending therapist email');
+    return;
   }
+
+  emailjs.send('service_puww2kb','template_zh8jess', {
+    to_name: therapist.name,
+    to_email: 'aidanleo@yahoo.co.uk', // For testing
+    message: summaryText, // Plain text fallback
+    message_html: simpleEmailHTML, // Use hyperlinks in HTML
+    html_message: simpleEmailHTML, // Alternative HTML field
+    html_content: simpleEmailHTML, // Another HTML field name
+    customer_name: customerName,
+    customer_email: customerEmail,
+    customer_phone: customerPhone,
+    address_for_massage: address,
+    therapist_name: therapist.name,
+    accept_link: acceptUrl,
+    decline_link: declineUrl
+  }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+    console.log('Email sent to therapist successfully:', therapist.name, response);
+  }).catch(err => {
+    console.error('Email failed for therapist:', therapist.name, err);
+  });
 }
 
 // Send confirmation email to customer
