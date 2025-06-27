@@ -81,20 +81,25 @@
       <button class="btn prev" data-prev="step4">Back</button>
       <button id="requestBtn" class="btn next" data-next="step6">Request Booking</button>
     </div>
-    <!-- Step 6: Booking Request (Accept/Decline) -->
+    <!-- Step 6: Payment -->
     <div id="step6" class="step">
-      <h2>6. Booking Request</h2>
-      <p id="requestMsg">Request sent to therapist...</p>
-      <button id="acceptBtn" class="btn">Simulate Accept</button>
-      <button id="declineBtn" class="btn">Simulate Decline</button>
-    </div>
-    <!-- Step 7: Payment -->
-    <div id="step7" class="step">
-      <h2>7. Confirm & Pay</h2>
+      <h2>6. Payment Details</h2>
       <div id="summary"></div>
+      <p style="color: #666; font-size: 14px; margin: 10px 0;">Your card will only be charged after a therapist accepts your booking request.</p>
       <div id="card-element"></div>
-      <button class="btn prev" data-prev="step6">Back</button>
-      <button id="payBtn" class="btn primary">Pay</button>
+      <button class="btn prev" data-prev="step5">Back</button>
+      <button id="payBtn" class="btn primary">Submit Booking Request</button>
+    </div>
+    <!-- Step 7: Booking Request (Accept/Decline) -->
+    <div id="step7" class="step">
+      <h2>7. Booking Request</h2>
+      <p id="requestMsg">Payment successful! Request sent to therapist...</p>
+      <div id="therapistStatus">
+        <p><strong>Current Therapist:</strong> <span id="currentTherapist">Loading...</span></p>
+        <p><strong>Time Remaining:</strong> <span id="timeRemaining">120 seconds</span></p>
+      </div>
+      <button id="acceptBtn" class="btn" style="display: none;">Simulate Accept</button>
+      <button id="declineBtn" class="btn" style="display: none;">Simulate Decline</button>
     </div>
     <!-- Step 8: Final Confirmation -->
     <div id="step8" class="step">
