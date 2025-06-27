@@ -52,26 +52,26 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize EmailJS
   initEmailJS();
   
-  // Test EmailJS functionality
-  setTimeout(() => {
-    if (typeof emailjs !== 'undefined') {
-      console.log('Testing EmailJS...');
-      // Simple test email
-      emailjs.send('service_puww2kb','template_zh8jess', {
-        to_name: 'Test',
-        to_email: 'aidanleo@yahoo.co.uk',
-        message: 'This is a test email from the booking system',
-        customer_name: 'Test Customer',
-        customer_email: 'test@example.com',
-        customer_phone: '123-456-7890',
-        booking_details: 'Test booking details'
-      }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-        console.log('Test email sent successfully:', response);
-      }).catch(err => {
-        console.error('Test email failed:', err);
-      });
-    }
-  }, 2000);
+  // Test EmailJS functionality - REMOVED to prevent duplicate emails
+  // setTimeout(() => {
+  //   if (typeof emailjs !== 'undefined') {
+  //     console.log('Testing EmailJS...');
+  //     // Simple test email
+  //     emailjs.send('service_puww2kb','template_zh8jess', {
+  //       to_name: 'Test',
+  //       to_email: 'aidanleo@yahoo.co.uk',
+  //       message: 'This is a test email from the booking system',
+  //       customer_name: 'Test Customer',
+  //       customer_email: 'test@example.com',
+  //       customer_phone: '123-456-7890',
+  //       booking_details: 'Test booking details'
+  //     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+  //       console.log('Test email sent successfully:', response);
+  //     }).catch(err => {
+  //       console.error('Test email failed:', err);
+  //     });
+  //   }
+  // }, 2000);
   
   const durationSelect = document.getElementById('duration');
   const parkingSelect = document.getElementById('parking');
@@ -376,6 +376,11 @@ function sendRequestToCurrentTherapist() {
   // Send email to current therapist
   sendTherapistEmail(currentTherapist);
   
+  // Send confirmation email to customer (only on first therapist)
+  if (currentTherapistIndex === 0) {
+    sendCustomerConfirmationEmail();
+  }
+  
   // Start countdown timer
   startCountdown();
 }
@@ -462,6 +467,74 @@ function sendTherapistEmail(therapist) {
       console.log('Email sent to therapist:', therapist.name, response);
     }).catch(err => {
       console.error('Email failed for therapist:', therapist.name, err);
+    });
+  }
+}
+
+// Send confirmation email to customer
+function sendCustomerConfirmationEmail() {
+  const customerName = document.getElementById('customerName').value;
+  const customerEmail = document.getElementById('customerEmail').value;
+  const address = document.getElementById('address').value;
+  const service = document.getElementById('service').value;
+  const duration = document.getElementById('duration').value;
+  const date = document.getElementById('date').value;
+  const time = document.getElementById('time').value;
+  const price = calculatePrice();
+  
+  const customerEmailHTML = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #00729B; margin-bottom: 10px;">Thank You, ${customerName}! 🎉</h1>
+        <p style="color: #666; font-size: 16px;">We've received your massage booking request</p>
+      </div>
+      
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #00729B; margin-top: 0;">Your Booking Details</h3>
+        <p><strong>Service:</strong> ${service}</p>
+        <p><strong>Duration:</strong> ${duration} minutes</p>
+        <p><strong>Date:</strong> ${date}</p>
+        <p><strong>Time:</strong> ${time}</p>
+        <p><strong>Address:</strong> ${address}</p>
+        <p><strong>Total Amount:</strong> $${price}</p>
+      </div>
+      
+      <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+        <h3 style="color: #28a745; margin-top: 0;">What Happens Next?</h3>
+        <p>We're currently reaching out to our qualified therapists in your area to confirm your booking. Here's what you can expect:</p>
+        <ul style="color: #333;">
+          <li><strong>Response Time:</strong> Usually within 10-15 minutes, maximum 2 hours</li>
+          <li><strong>Confirmation:</strong> You'll receive a confirmation once a therapist accepts</li>
+          <li><strong>Payment:</strong> Your card will only be charged after confirmation</li>
+          <li><strong>No Risk:</strong> If no therapist is available, you won't be charged</li>
+        </ul>
+      </div>
+      
+      <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+        <h3 style="color: #856404; margin-top: 0;">Relax & Wait</h3>
+        <p>While we work on securing your perfect therapist, why not take a moment to prepare for your upcoming relaxation session? We're excited to bring the spa experience directly to your door!</p>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666;">
+        <p><strong>Rejuvenators Mobile Massage</strong></p>
+        <p>Bringing wellness to your doorstep</p>
+        <p style="font-size: 12px;">If you have any questions, please don't hesitate to contact us</p>
+      </div>
+    </div>
+  `;
+
+  if (typeof emailjs !== 'undefined' && emailjs.init) {
+    emailjs.send('service_puww2kb','template_zh8jess', {
+      to_name: customerName,
+      to_email: customerEmail,
+      message_html: customerEmailHTML,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      booking_details: `Service: ${service}, Duration: ${duration}min, Date: ${date}, Time: ${time}, Address: ${address}, Price: $${price}`
+    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+      console.log('Customer confirmation email sent successfully:', response);
+    }).catch(err => {
+      console.error('Customer confirmation email failed:', err);
     });
   }
 }
