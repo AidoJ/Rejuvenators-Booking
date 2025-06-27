@@ -33,9 +33,6 @@
         <option value="free">Free Parking Available</option>
         <option value="paid">Paid Parking Required</option>
       </select>
-      <div id="priceDisplay" style="background:#e0f7fa; padding:10px; margin:10px 0; border-radius:4px; text-align:center;">
-        <strong>Estimated Price: $<span id="priceAmount">159.00</span></strong>
-      </div>
       <button class="btn prev" data-prev="step1">Back</button>
       <button class="btn next" data-next="step3">Next</button>
     </div>
@@ -57,6 +54,10 @@
         <option value="19:00">7:00 PM</option><option value="19:30">7:30 PM</option>
         <option value="20:00">8:00 PM</option><option value="20:30">8:30 PM</option>
       </select>
+      <div id="priceDisplay" style="background:#e0f7fa; padding:10px; margin:10px 0; border-radius:4px; text-align:center;">
+        <strong>Estimated Price: $<span id="priceAmount">159.00</span></strong>
+        <div id="priceBreakdown" style="font-size: 12px; margin-top: 5px; color: #666;"></div>
+      </div>
       <button class="btn prev" data-prev="step2">Back</button>
       <button class="btn next" data-next="step4">Next</button>
     </div>
