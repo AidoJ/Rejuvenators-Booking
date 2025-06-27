@@ -1,0 +1,4 @@
+[
+  {"name":"Jane","lat":-27.4538,"lon":153.0350,"available":true,"email":"jane@example.com"},
+  {"name":"Jace","lat":-27.4789,"lon":153.0236,"available":true,"email":"jace@example.com"}
+]

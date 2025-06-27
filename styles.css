@@ -1,0 +1,7 @@
+body{font-family:Arial,sans-serif;background:#f5f9fa;margin:0;padding:20px;}
+#container{max-width:600px;margin:auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+h1{color:#00729B;text-align:center;}h2{color:#005f7d;margin-top:20px;}
+input,select{width:100%;padding:10px;margin:8px 0;border:1px solid #ccc;border-radius:4px;}
+button{padding:12px;margin:8px 4px 0 0;border:none;border-radius:4px;cursor:pointer;}
+button.btn{background:#00729B;color:#fff;}button.primary{background:#005f7d;color:#fff;}
+button:hover{opacity:0.9;}#summary{background:#e0f7fa;padding:10px;margin:10px 0;border-radius:4px;}
