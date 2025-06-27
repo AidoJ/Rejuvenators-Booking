@@ -1,4 +1,3 @@
-
 // Autocomplete initialization
 let autocomplete, current='step1', currentLat, currentLon, selectedTherapistInfo;
 function initAutocomplete() {
@@ -21,6 +20,31 @@ function show(step) {
 }
 document.querySelectorAll('.next').forEach(b=>b.onclick=()=>show(b.dataset.next));
 document.querySelectorAll('.prev').forEach(b=>b.onclick=()=>show(b.dataset.prev));
+
+// Price display update
+function updatePriceDisplay() {
+  const priceElement = document.getElementById('priceAmount');
+  if (priceElement) {
+    const price = calculatePrice();
+    priceElement.textContent = price;
+  }
+}
+
+// Add event listeners for price updates
+document.addEventListener('DOMContentLoaded', function() {
+  const durationSelect = document.getElementById('duration');
+  const parkingSelect = document.getElementById('parking');
+  
+  if (durationSelect) {
+    durationSelect.addEventListener('change', updatePriceDisplay);
+  }
+  if (parkingSelect) {
+    parkingSelect.addEventListener('change', updatePriceDisplay);
+  }
+  
+  // Initial price calculation
+  updatePriceDisplay();
+});
 
 // After datetime step to fetch therapists
 document.querySelector('.next[data-next="step4"]').onclick=()=> {
@@ -65,11 +89,16 @@ document.getElementById('requestBtn').onclick = () => {
   const sel = document.getElementById('therapistSelect').value;
   selectedTherapistInfo = JSON.parse(sel);
 
-  // 4. Send email to Jane’s test address
+  // 4. Send email to Jane's test address
+  // Note: You need to configure EmailJS with your actual credentials:
+  // 1. Sign up at https://www.emailjs.com/
+  // 2. Create an email service (Gmail, Outlook, etc.)
+  // 3. Create an email template
+  // 4. Replace the placeholder values below with your actual EmailJS credentials
   emailjs.init('YOUR_EMAILJS_PUBLIC_KEY');
   emailjs.send('YOUR_SERVICE_ID','YOUR_TEMPLATE_ID', {
     to_name: selectedTherapistInfo.name,
-    to_email: 'aishizhenjing@gmail.com', // Jane’s test email
+    to_email: 'aishizhengjing@gmail.com', // Fixed email address
     message: summaryText
   }).then(() => {
     console.log('Booking request email sent');
@@ -80,7 +109,6 @@ document.getElementById('requestBtn').onclick = () => {
     alert('Failed to send booking request email.');
   });
 };
-
 
 // Accept/Decline simulation
 document.getElementById('acceptBtn').onclick=()=>{
@@ -122,4 +150,3 @@ document.getElementById('payBtn').onclick=()=>{
     show('step7');
   });
 };
-
