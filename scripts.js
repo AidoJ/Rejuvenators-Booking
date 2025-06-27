@@ -8,6 +8,27 @@ let therapistTimeout = null;
 let timeRemaining = 120; // 120 seconds for testing
 let bookingAccepted = false; // Flag to prevent sending emails to other therapists
 
+// Load Google API key securely and initialize Maps
+async function loadGoogleMapsAPI() {
+  try {
+    const response = await fetch('/api/google-key');
+    const data = await response.json();
+    
+    if (data.apiKey) {
+      // Load Google Maps API with the secure key
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=places&callback=initAutocomplete`;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    } else {
+      console.error('Failed to load Google API key');
+    }
+  } catch (error) {
+    console.error('Error loading Google API key:', error);
+  }
+}
+
 // Initialize EmailJS
 function initEmailJS() {
   if (typeof emailjs !== 'undefined') {
@@ -50,6 +71,9 @@ function updatePriceDisplay() {
 
 // Add event listeners for price updates
 document.addEventListener('DOMContentLoaded', function() {
+  // Load Google Maps API securely
+  loadGoogleMapsAPI();
+  
   // Initialize EmailJS
   initEmailJS();
   
