@@ -451,7 +451,28 @@ function sendTherapistEmail(therapist) {
     `Time: ${document.getElementById('time').value}\n` +
     `Parking: ${document.getElementById('parking').value}\n` +
     `Total Price: $${price}\n\n` +
-    `Please respond to this booking request by clicking one of the buttons below:`;
+    `Please respond to this booking request within 120 seconds:\n\n` +
+    `ACCEPT: ${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
+      customerName, customerEmail, customerPhone, address,
+      service: document.getElementById('service').value,
+      duration: document.getElementById('duration').value,
+      date: document.getElementById('date').value,
+      time: document.getElementById('time').value,
+      parking: document.getElementById('parking').value,
+      price: price,
+      therapistName: therapist.name
+    }))}\n\n` +
+    `DECLINE: ${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
+      customerName, customerEmail, customerPhone, address,
+      service: document.getElementById('service').value,
+      duration: document.getElementById('duration').value,
+      date: document.getElementById('date').value,
+      time: document.getElementById('time').value,
+      parking: document.getElementById('parking').value,
+      price: price,
+      therapistName: therapist.name
+    }))}\n\n` +
+    `You have 120 seconds to respond before this request is sent to another therapist.`;
 
   // Create HTML email with buttons
   const emailHTML = `
@@ -520,15 +541,56 @@ function sendTherapistEmail(therapist) {
 
   console.log('EmailJS available:', typeof emailjs !== 'undefined');
   console.log('EmailJS init available:', typeof emailjs !== 'undefined' && emailjs.init);
+  console.log('Email HTML content:', emailHTML);
 
   if (typeof emailjs !== 'undefined' && emailjs.init) {
     console.log('Attempting to send therapist email...');
+    
+    // Create a simpler email format that should work better
+    const simpleEmailHTML = `
+      <h2>NEW BOOKING REQUEST</h2>
+      <p><strong>Customer:</strong> ${customerName}</p>
+      <p><strong>Email:</strong> ${customerEmail}</p>
+      <p><strong>Phone:</strong> ${customerPhone}</p>
+      <p><strong>Address:</strong> ${address}</p>
+      <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
+      <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
+      <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
+      <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
+      <p><strong>Price:</strong> $${price}</p>
+      <br>
+      <p><strong>Please respond within 120 seconds:</strong></p>
+      <p><a href="${window.location.origin}${window.location.pathname}?action=accept&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
+        customerName, customerEmail, customerPhone, address,
+        service: document.getElementById('service').value,
+        duration: document.getElementById('duration').value,
+        date: document.getElementById('date').value,
+        time: document.getElementById('time').value,
+        parking: document.getElementById('parking').value,
+        price: price,
+        therapistName: therapist.name
+      }))}">ACCEPT</a></p>
+      <p><a href="${window.location.origin}${window.location.pathname}?action=decline&therapist=${therapist.name}&booking=${encodeURIComponent(JSON.stringify({
+        customerName, customerEmail, customerPhone, address,
+        service: document.getElementById('service').value,
+        duration: document.getElementById('duration').value,
+        date: document.getElementById('date').value,
+        time: document.getElementById('time').value,
+        parking: document.getElementById('parking').value,
+        price: price,
+        therapistName: therapist.name
+      }))}">DECLINE</a></p>
+    `;
+    
+    console.log('Simple email HTML:', simpleEmailHTML);
+    
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: therapist.name,
       to_email: 'aidanleo@yahoo.co.uk', // For testing
       message: summaryText, // Plain text fallback
-      message_html: emailHTML, // HTML version with buttons
-      html_message: emailHTML, // Alternative HTML field
+      message_html: simpleEmailHTML, // Use simpler HTML
+      html_message: simpleEmailHTML, // Alternative HTML field
+      html_content: simpleEmailHTML, // Another HTML field name
       customer_name: customerName,
       customer_email: customerEmail,
       customer_phone: customerPhone,
