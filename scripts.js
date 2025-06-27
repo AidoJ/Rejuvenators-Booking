@@ -5,7 +5,7 @@ let autocomplete, current='step1', currentLat, currentLon, selectedTherapistInfo
 function initEmailJS() {
   if (typeof emailjs !== 'undefined') {
     emailjs.init('V8qq2pjH8vfh3a6q3');
-    console.log('EmailJS initialized successfully');
+    console.log('EmailJS v3 initialized successfully');
   } else {
     console.log('EmailJS not loaded');
   }
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
         customer_email: 'test@example.com',
         customer_phone: '123-456-7890',
         booking_details: 'Test booking details'
-      }).then((response) => {
+      }, 'V8qq2pjH8vfh3a6q3').then((response) => {
         console.log('Test email sent successfully:', response);
       }).catch(err => {
         console.error('Test email failed:', err);
@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
           customer_email: 'test@example.com',
           customer_phone: '123-456-7890',
           booking_details: 'Test booking details - ' + new Date().toLocaleString()
-        }).then((response) => {
+        }, 'V8qq2pjH8vfh3a6q3').then((response) => {
           console.log('Test email sent successfully:', response);
           alert('Test email sent successfully! Check console for details.');
         }).catch(err => {
@@ -285,7 +285,7 @@ document.getElementById('requestBtn').onclick = () => {
       customer_email: customerEmail,
       customer_phone: customerPhone,
       booking_details: summaryText
-    }).then((response) => {
+    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
       console.log('EmailJS success response:', response);
       document.getElementById('requestMsg').innerText = 'Request sent! Waiting for therapist response…';
       show('step6');
