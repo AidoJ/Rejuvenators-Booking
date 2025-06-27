@@ -671,3 +671,49 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
         <p><strong>Therapist:</strong> ${therapistName}</p>
       </div>
       <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Your Details</h3>
+        <p><strong>Name:</strong> ${customerName}</p>
+        <p><strong>Email:</strong> ${customerEmail}</p>
+      </div>
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Booking Details</h3>
+        <p><strong>Address For Massage:</strong> ${booking.address}</p>
+        <p><strong>Service:</strong> ${booking.service}</p>
+        <p><strong>Duration:</strong> ${booking.duration} min</p>
+        <p><strong>Date:</strong> ${booking.date}</p>
+        <p><strong>Time:</strong> ${booking.time}</p>
+        <p><strong>Parking:</strong> ${booking.parking}</p>
+        <p><strong>Total Price:</strong> $${booking.price}</p>
+      </div>
+      <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107;">
+        <p style="margin: 0; color: #856404;"><strong>Payment Information:</strong> Your payment has been processed successfully.</p>
+      </div>
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
+        <p><strong>Rejuvenators Mobile Massage</strong></p>
+        <p>Bringing wellness to your doorstep</p>
+        <p style="font-size: 12px;">If you have any questions, please don't hesitate to contact us</p>
+      </div>
+    </div>
+  `;
+
+  if (typeof emailjs !== 'undefined' && emailjs.init) {
+    console.log('Attempting to send customer confirmation email...');
+    emailjs.send('service_puww2kb','template_zh8jess', {
+      to_name: customerName,
+      to_email: customerEmail, // Send to customer's actual email
+      message: '', // No plain text, only HTML
+      message_html: customerEmailHTML,
+      html_message: customerEmailHTML,
+      html_content: customerEmailHTML,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
+    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+      console.log('Customer confirmation email sent successfully:', response);
+    }).catch(err => {
+      console.error('Customer confirmation email failed:', err);
+    });
+  } else {
+    console.error('EmailJS not available for customer email');
+  }
+}
