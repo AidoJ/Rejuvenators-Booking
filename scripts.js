@@ -122,3 +122,4 @@ document.getElementById('payBtn').onclick=()=>{
     show('step7');
   });
 };
+
