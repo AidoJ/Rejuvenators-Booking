@@ -258,13 +258,18 @@ document.addEventListener('DOMContentLoaded', function() {
             opt.text=`${t.name} (${t.distance.toFixed(1)} mi)`;
             sel.append(opt);
           });
-          // Default to first therapist
+          
+          // Set the selected therapist to the first one initially
           selectedTherapistInfo = availableTherapists[0];
-          selectedTherapistName = selectedTherapistInfo.name; // Store the selected name
+          selectedTherapistName = selectedTherapistInfo.name;
+          
+          // Update when user changes selection
           sel.onchange = function() {
             selectedTherapistInfo = JSON.parse(this.value);
-            selectedTherapistName = selectedTherapistInfo.name; // Update the selected name
+            selectedTherapistName = selectedTherapistInfo.name;
+            console.log('User selected therapist:', selectedTherapistName);
           };
+          
           // Re-enable the request button
           const requestBtn = document.getElementById('requestBtn');
           if (requestBtn) {
@@ -282,6 +287,16 @@ document.addEventListener('DOMContentLoaded', function() {
   const requestBtn = document.getElementById('requestBtn');
   if (requestBtn) {
     requestBtn.onclick = () => {
+      console.log('Request button clicked. Selected therapist:', selectedTherapistName);
+      
+      // Ensure we have the correct selected therapist
+      const therapistSelect = document.getElementById('therapistSelect');
+      if (therapistSelect) {
+        selectedTherapistInfo = JSON.parse(therapistSelect.value);
+        selectedTherapistName = selectedTherapistInfo.name;
+        console.log('Final selected therapist:', selectedTherapistName);
+      }
+      
       // Store the selected therapist as the first to try
       if (selectedTherapistInfo) {
         // Create a new array with selected therapist first, then others
@@ -581,7 +596,8 @@ document.getElementById('payBtn').onclick=()=>{
 function startTherapistAssignment() {
   console.log('Starting therapist assignment process...');
   console.log('Available therapists:', availableTherapists);
-  console.log('Selected therapist:', selectedTherapistName);
+  console.log('Selected therapist name:', selectedTherapistName);
+  console.log('Selected therapist info:', selectedTherapistInfo);
   
   // Reset booking accepted flag for new booking
   bookingAccepted = false;
@@ -614,7 +630,7 @@ function sendRequestToCurrentTherapist() {
   if (currentTherapistIndex >= availableTherapists.length) {
     // No more therapists available
     console.log('No more therapists available');
-    document.getElementById('requestMsg').innerText = 'No therapists available. Your payment will be refunded.';
+    document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
     document.getElementById('therapistStatus').innerHTML = '<p style="color: red;">No therapists responded in time.</p>';
     return;
   }
@@ -631,6 +647,7 @@ function sendRequestToCurrentTherapist() {
   // Update UI based on whether we're in fallback mode
   if (currentTherapistIndex === 0) {
     // First therapist (selected one)
+    document.getElementById('requestMsg').innerText = `Sending request to ${currentTherapist.name}...`;
     document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi) - Your selected therapist`;
   } else if (currentTherapistIndex === 1 && !isInFallbackMode) {
     // Entering fallback mode
@@ -639,6 +656,7 @@ function sendRequestToCurrentTherapist() {
     document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi)`;
   } else {
     // Already in fallback mode
+    document.getElementById('requestMsg').innerText = `Trying ${currentTherapist.name}...`;
     document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi)`;
   }
 
@@ -646,7 +664,7 @@ function sendRequestToCurrentTherapist() {
   sendTherapistEmail(currentTherapist);
 
   // Start countdown timer
-  console.log('Starting countdown timer...');
+  console.log('Starting countdown timer for therapist index:', currentTherapistIndex);
   startCountdown();
 }
 
@@ -891,13 +909,17 @@ function showSimpleConfirmation(therapistName, booking) {
 
 // Start countdown timer
 function startCountdown() {
-  console.log('Starting countdown timer...');
+  console.log('Starting countdown timer for therapist index:', currentTherapistIndex);
   
   const timerElement = document.getElementById('timeRemaining');
   if (!timerElement) {
     console.error('Timer element not found');
     return;
   }
+  
+  // Reset timer for current therapist
+  timeRemaining = 120;
+  timerElement.textContent = `${timeRemaining} seconds`;
   
   therapistTimeout = setInterval(() => {
     if (bookingAccepted) {
@@ -910,10 +932,22 @@ function startCountdown() {
     timerElement.textContent = `${timeRemaining} seconds`;
     
     if (timeRemaining <= 0) {
-      console.log('Timer expired, moving to next therapist');
+      console.log('Timer expired for therapist index:', currentTherapistIndex);
       clearInterval(therapistTimeout);
+      
+      // Move to next therapist
       currentTherapistIndex++;
-      sendRequestToCurrentTherapist();
+      console.log('Moving to next therapist, index:', currentTherapistIndex);
+      
+      if (currentTherapistIndex < availableTherapists.length) {
+        // Send request to next therapist
+        sendRequestToCurrentTherapist();
+      } else {
+        // No more therapists available
+        console.log('No more therapists available');
+        document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
+        document.getElementById('therapistStatus').innerHTML = '<p style="color: red;">No therapists responded in time.</p>';
+      }
     }
   }, 1000);
 }
