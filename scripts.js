@@ -62,36 +62,18 @@ function loadGoogleMapsAPIFallback() {
 
 // Initialize EmailJS
 function initEmailJS() {
-  console.log('=== initEmailJS called ===');
-  console.log('EmailJS available:', typeof emailjs !== 'undefined');
-  
   if (typeof emailjs !== 'undefined') {
-    console.log('EmailJS version:', emailjs.version);
-    console.log('EmailJS init function available:', typeof emailjs.init === 'function');
-    
-    try {
-      emailjs.init('V8qq2pjH8vfh3a6q3');
-      console.log('EmailJS v3 initialized successfully');
-      console.log('EmailJS init status:', emailjs.init);
-    } catch (error) {
-      console.error('Error initializing EmailJS:', error);
-    }
-  } else {
-    console.log('EmailJS not loaded');
+    emailjs.init('V8qq2pjH8vfh3a6q3');
   }
 }
 
 function initAutocomplete() {
-  console.log('Initializing Google Places Autocomplete...');
-  
   const addressInput = document.getElementById('address');
   if (!addressInput) {
-    console.error('Address input element not found');
     return;
   }
   
   if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-    console.error('Google Maps API not loaded properly');
     return;
   }
   
@@ -103,18 +85,11 @@ function initAutocomplete() {
     
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
-      console.log('Place selected:', place);
-      
       if (place.geometry && place.geometry.location) {
         currentLat = place.geometry.location.lat();
         currentLon = place.geometry.location.lng();
-        console.log('Coordinates set:', currentLat, currentLon);
-      } else {
-        console.error('No geometry found for selected place');
       }
     });
-    
-    console.log('Google Places Autocomplete initialized successfully');
   } catch (error) {
     console.error('Error initializing autocomplete:', error);
   }
@@ -164,7 +139,6 @@ function updatePriceDisplay() {
 document.addEventListener('DOMContentLoaded', function() {
   // Generate unique booking ID for this session
   bookingId = 'booking_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  console.log('Generated booking ID:', bookingId);
   
   // Initialize progress bar
   updateProgressBar('step1');
@@ -178,16 +152,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Set up manual address input fallback
   const addressInput = document.getElementById('address');
   if (addressInput) {
-    // Add manual input handling for when autocomplete fails
     addressInput.addEventListener('input', function() {
-      // If user types manually, we can still use the address
-      // The coordinates will be set to a default location for distance calculation
       if (this.value.length > 10) {
-        // Set default coordinates for Brisbane CBD if no coordinates available
         if (!currentLat || !currentLon) {
           currentLat = -27.4698; // Brisbane CBD latitude
           currentLon = 153.0251; // Brisbane CBD longitude
-          console.log('Using default coordinates for distance calculation');
         }
       }
     });
@@ -221,18 +190,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const bookingData = urlParams.get('b') || urlParams.get('booking');
   const receivedBookingId = urlParams.get('bid') || urlParams.get('bookingId');
   
-  console.log('URL Parameters found:', { action, therapistName, bookingData, receivedBookingId });
-  
   if (action && bookingData && therapistName && receivedBookingId) {
-    console.log('All required parameters found, calling handleTherapistResponse...');
-    // Call immediately to prevent form from showing
     setTimeout(() => {
       handleTherapistResponse(action, therapistName, bookingData, receivedBookingId);
     }, 100);
-  } else {
-    console.log('Missing required parameters for therapist response');
   }
-  
+
   // After datetime step to fetch therapists
   const nextToStep5Btn = document.querySelector('.next[data-next="step5"]');
   if (nextToStep5Btn) {
@@ -250,7 +213,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (availableTherapists.length === 0) {
           selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Unfortunately we\'re don\'t have any therapists available in your area right now.</p>';
-          // Disable the request button
           const requestBtn = document.getElementById('requestBtn');
           if (requestBtn) {
             requestBtn.disabled = true;
@@ -278,7 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
           sel.onchange = function() {
             selectedTherapistInfo = JSON.parse(this.value);
             selectedTherapistName = selectedTherapistInfo.name;
-            console.log('User selected therapist:', selectedTherapistName);
           };
           
           // Re-enable the request button
@@ -298,34 +259,28 @@ document.addEventListener('DOMContentLoaded', function() {
   const requestBtn = document.getElementById('requestBtn');
   if (requestBtn) {
     requestBtn.onclick = () => {
-      console.log('Request button clicked. Selected therapist:', selectedTherapistName);
-      
       // Ensure we have the correct selected therapist
       const therapistSelect = document.getElementById('therapistSelect');
       if (therapistSelect) {
         selectedTherapistInfo = JSON.parse(therapistSelect.value);
         selectedTherapistName = selectedTherapistInfo.name;
-        console.log('Final selected therapist:', selectedTherapistName);
       }
       
       // Store the selected therapist as the first to try
       if (selectedTherapistInfo) {
-        // Create a new array with selected therapist first, then others
         const otherTherapists = availableTherapists.filter(t => t.name !== selectedTherapistInfo.name);
         availableTherapists = [selectedTherapistInfo, ...otherTherapists];
-        console.log('Therapist order set:', availableTherapists.map(t => t.name));
       }
       show('step6'); // Move to payment step
     };
   }
   
-  // Step6 summary and stripe setup - this should trigger when entering step 6
+  // Step6 summary and stripe setup
   const observer = new MutationObserver(function(mutations) {
     mutations.forEach(function(mutation) {
       if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
         const step6 = document.getElementById('step6');
         if (step6 && step6.classList.contains('active')) {
-          // Step 6 is now active, update summary and setup Stripe
           const summary = document.getElementById('summary');
           const price = calculatePrice();
           const customerName = document.getElementById('customerName').value;
@@ -382,9 +337,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const debugBtn = document.getElementById('debugBtn');
   if (debugBtn) {
     debugBtn.onclick = () => {
-      console.log('Debug button clicked - testing therapist assignment...');
-      
-      // Create test booking data
       const testBooking = {
         customerName: document.getElementById('customerName').value || 'Test Customer',
         customerEmail: document.getElementById('customerEmail').value || 'test@example.com',
@@ -399,9 +351,6 @@ document.addEventListener('DOMContentLoaded', function() {
         therapistName: selectedTherapistName || 'Test Therapist'
       };
       
-      console.log('Test booking data:', testBooking);
-      
-      // Test the Accept functionality
       const testBookingId = 'test_booking_' + Date.now();
       const testBookingData = encodeURIComponent(JSON.stringify({
         n: testBooking.customerName,
@@ -417,7 +366,6 @@ document.addEventListener('DOMContentLoaded', function() {
         tn: testBooking.therapistName
       }));
       
-      // Simulate Accept action
       handleTherapistResponse('accept', testBooking.therapistName, testBookingData, testBookingId);
     };
   }
@@ -425,21 +373,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Handle therapist response from URL
 function handleTherapistResponse(action, therapistName, bookingData, receivedBookingId) {
-  console.log('handleTherapistResponse called with:', { action, therapistName, bookingData, receivedBookingId });
-  
   try {
     // Check if this booking has already been accepted
     const acceptedBookingId = localStorage.getItem('acceptedBookingId');
-    console.log('Checking for existing acceptance. Stored ID:', acceptedBookingId, 'Received ID:', receivedBookingId);
     
     if (acceptedBookingId === receivedBookingId) {
-      console.log('This booking has already been accepted');
       showAlreadyAcceptedMessage();
       return;
     }
     
     const booking = JSON.parse(decodeURIComponent(bookingData));
-    console.log('Parsed booking data:', booking);
     
     // Convert compact format to full format for compatibility
     const fullBooking = {
@@ -456,11 +399,7 @@ function handleTherapistResponse(action, therapistName, bookingData, receivedBoo
       therapistName: booking.therapistName || booking.tn
     };
     
-    console.log('Full booking object:', fullBooking);
-    
     if (action === 'accept') {
-      console.log('Processing ACCEPT action...');
-      
       // IMMEDIATELY stop all processes
       if (therapistTimeout) {
         clearInterval(therapistTimeout);
@@ -483,18 +422,13 @@ function handleTherapistResponse(action, therapistName, bookingData, receivedBoo
       sendCustomerConfirmationEmail(fullBooking, therapistName);
       
       // Show confirmation
-      console.log('Showing confirmation page...');
       showSimpleConfirmation(therapistName, fullBooking);
     } else if (action === 'decline') {
-      console.log('Processing DECLINE action...');
       // Show decline message
       showDeclineMessage(therapistName);
-    } else {
-      console.log('Unknown action:', action);
     }
   } catch (e) {
     console.error('Error parsing booking data:', e);
-    console.error('Raw booking data:', bookingData);
   }
 }
 
@@ -515,14 +449,8 @@ function showAlreadyAcceptedMessage() {
 
 // Send customer decline email
 function sendCustomerDeclineEmail(booking, therapistName) {
-  console.log('Sending customer decline email...');
-  console.log('Booking data received:', booking);
-  console.log('Customer email from booking:', booking.customerEmail);
-
   const customerName = booking.customerName;
   const customerEmail = booking.customerEmail;
-
-  console.log('Final customer email being used:', customerEmail);
 
   const declineHTML = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
@@ -572,12 +500,11 @@ function sendCustomerDeclineEmail(booking, therapistName) {
   `;
 
   if (typeof emailjs !== 'undefined' && emailjs.init) {
-    console.log('Attempting to send customer decline email to:', customerEmail);
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
       to_email: customerEmail,
       subject: 'Booking Declined',
-      message: `Your booking request has been declined by ${therapistName} for ${booking.service} on ${booking.date} at ${booking.time}. No charges have been made to your card.`, // Plain text fallback
+      message: `Your booking request has been declined by ${therapistName} for ${booking.service} on ${booking.date} at ${booking.time}. No charges have been made to your card.`,
       message_html: declineHTML,
       html_message: declineHTML,
       html_content: declineHTML,
@@ -585,12 +512,10 @@ function sendCustomerDeclineEmail(booking, therapistName) {
       customer_email: customerEmail,
       booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Customer decline email sent successfully to:', customerEmail, response);
+      // Email sent successfully
     }).catch(err => {
-      console.error('Customer decline email failed for:', customerEmail, err);
+      console.error('Customer decline email failed:', err);
     });
-  } else {
-    console.error('EmailJS not available for customer decline email');
   }
 }
 
@@ -726,11 +651,6 @@ document.getElementById('payBtn').onclick=()=>{
 
 // Start the therapist assignment process
 function startTherapistAssignment() {
-  console.log('Starting therapist assignment process...');
-  console.log('Available therapists:', availableTherapists);
-  console.log('Selected therapist name:', selectedTherapistName);
-  console.log('Selected therapist info:', selectedTherapistInfo);
-  
   // Reset booking accepted flag for new booking
   bookingAccepted = false;
   currentTherapistIndex = 0;
@@ -744,13 +664,6 @@ function startTherapistAssignment() {
   const customerPhone = document.getElementById('customerPhone').value;
   const address = document.getElementById('address').value;
   const price = calculatePrice();
-  
-  console.log('Form data captured:');
-  console.log('Customer name:', customerName);
-  console.log('Customer email from form:', customerEmail);
-  console.log('Customer phone:', customerPhone);
-  console.log('Address:', address);
-  console.log('Price:', price);
   
   const bookingData = {
     customerName: customerName,
@@ -766,128 +679,80 @@ function startTherapistAssignment() {
     therapistName: selectedTherapistName
   };
   
-  console.log('Booking data object created:', bookingData);
-  
   // Send acknowledgment email to customer
   sendCustomerAcknowledgmentEmail(bookingData);
   
   // Update the UI to show we're contacting the selected therapist
   document.getElementById('requestMsg').innerText = `Sending request to ${selectedTherapistName}...`;
   
-  // Add a small delay to ensure step 7 is visible
-  setTimeout(() => {
-    sendRequestToCurrentTherapist();
-  }, 500);
+  // Start the therapist assignment process immediately
+  sendRequestToCurrentTherapist();
 }
 
 // Send request to current therapist
 function sendRequestToCurrentTherapist() {
-  console.log('=== sendRequestToCurrentTherapist called ===');
-  
-  // Check multiple conditions to prevent sending emails if already accepted
+  // Check if booking already accepted
   const acceptedBookingId = localStorage.getItem('acceptedBookingId');
   const sessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
   
-  console.log('Checking acceptance status:');
-  console.log('- bookingAccepted:', bookingAccepted);
-  console.log('- acceptedBookingId:', acceptedBookingId);
-  console.log('- sessionBookingAccepted:', sessionBookingAccepted);
-  
   if (bookingAccepted || acceptedBookingId || sessionBookingAccepted) {
-    console.log('Booking already accepted, stopping therapist assignment. bookingAccepted:', bookingAccepted, 'acceptedBookingId:', acceptedBookingId, 'sessionBookingAccepted:', sessionBookingAccepted);
-    stopTherapistAssignment('sendRequestToCurrentTherapist called but already accepted.');
+    stopTherapistAssignment('Booking already accepted.');
     return;
   }
-  
-  console.log('Sending request to therapist index:', currentTherapistIndex);
-  console.log('Available therapists length:', availableTherapists.length);
-  console.log('Available therapists:', availableTherapists);
-  console.log('Booking accepted flag:', bookingAccepted);
-  console.log('Is in fallback mode:', isInFallbackMode);
 
   if (currentTherapistIndex >= availableTherapists.length) {
-    // No more therapists available
-    console.log('No more therapists available');
     document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
     document.getElementById('therapistStatus').innerHTML = '<p style="color: red;">No therapists responded in time.</p>';
     return;
   }
 
   const currentTherapist = availableTherapists[currentTherapistIndex];
-  console.log('Current therapist object:', currentTherapist);
-  console.log('Current therapist name:', currentTherapist.name);
 
   // Final check before sending email
   const finalAcceptedBookingId = localStorage.getItem('acceptedBookingId');
   const finalSessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
   
   if (bookingAccepted || finalAcceptedBookingId || finalSessionBookingAccepted) {
-    console.log('Booking accepted during processing, stopping therapist assignment.');
-    stopTherapistAssignment('sendRequestToCurrentTherapist about to send email but already accepted.');
+    stopTherapistAssignment('Booking accepted during processing.');
     return;
   }
 
   // Update UI based on whether we're in fallback mode
   if (currentTherapistIndex === 0) {
-    // First therapist (selected one)
     document.getElementById('requestMsg').innerText = `Sending request to ${currentTherapist.name}...`;
     document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi) - Your selected therapist`;
   } else if (currentTherapistIndex === 1 && !isInFallbackMode) {
-    // Entering fallback mode
     isInFallbackMode = true;
     document.getElementById('requestMsg').innerText = `${selectedTherapistName} did not respond. Now trying other available therapists...`;
     document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi)`;
   } else {
-    // Already in fallback mode
     document.getElementById('requestMsg').innerText = `Trying ${currentTherapist.name}...`;
     document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi)`;
   }
 
-  console.log('About to send email to therapist:', currentTherapist.name);
-  
   // Send email to current therapist
   sendTherapistEmail(currentTherapist);
 
   // Start countdown timer
-  console.log('Starting countdown timer for therapist index:', currentTherapistIndex);
   startCountdown();
 }
 
 // Send email to therapist
 function sendTherapistEmail(therapist) {
-  console.log('=== sendTherapistEmail called ===');
-  console.log('Therapist object received:', therapist);
-  console.log('Therapist name:', therapist.name);
-  
-  // Check multiple conditions to prevent sending emails if already accepted
+  // Check if booking already accepted
   const acceptedBookingId = localStorage.getItem('acceptedBookingId');
   const sessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
   
-  console.log('Checking acceptance status in sendTherapistEmail:');
-  console.log('- bookingAccepted:', bookingAccepted);
-  console.log('- acceptedBookingId:', acceptedBookingId);
-  console.log('- sessionBookingAccepted:', sessionBookingAccepted);
-  
   if (bookingAccepted || acceptedBookingId || sessionBookingAccepted) {
-    console.log('Booking already accepted, not sending email to therapist:', therapist.name);
-    stopTherapistAssignment('sendTherapistEmail called but already accepted.');
+    stopTherapistAssignment('Booking already accepted.');
     return;
   }
-  
-  console.log('Sending email to therapist:', therapist.name);
 
   const price = calculatePrice();
   const customerName = document.getElementById('customerName').value;
   const customerEmail = document.getElementById('customerEmail').value;
   const customerPhone = document.getElementById('customerPhone').value;
   const address = document.getElementById('address').value;
-
-  console.log('Form data for therapist email:');
-  console.log('- Customer name:', customerName);
-  console.log('- Customer email:', customerEmail);
-  console.log('- Customer phone:', customerPhone);
-  console.log('- Address:', address);
-  console.log('- Price:', price);
 
   // Include booking ID in the URL to track acceptances
   const acceptUrl = `${window.location.origin}${window.location.pathname}?a=accept&t=${encodeURIComponent(therapist.name)}&bid=${bookingId}&b=${encodeURIComponent(JSON.stringify({
@@ -903,15 +768,11 @@ function sendTherapistEmail(therapist) {
     pk: document.getElementById('parking').value, pr: price, tn: therapist.name
   }))}`;
 
-  console.log('Generated URLs:');
-  console.log('- Accept URL:', acceptUrl);
-  console.log('- Decline URL:', declineUrl);
-
   // Determine if this is the selected therapist
   const isSelectedTherapist = therapist.name === selectedTherapistName;
   const therapistNote = isSelectedTherapist ? ' (Customer specifically requested you!)' : '';
 
-  // Plain text fallback (no hyperlinks)
+  // Plain text fallback
   const summaryText =
     `NEW BOOKING REQUEST${therapistNote}\n\n` +
     `Customer Details:\n` +
@@ -931,7 +792,7 @@ function sendTherapistEmail(therapist) {
     `DECLINE: ${declineUrl}\n` +
     `You have 120 seconds to respond before this request is sent to another therapist.`;
 
-  // HTML version with hyperlinks, larger, bold, ALL CAPS
+  // HTML version with hyperlinks
   const simpleEmailHTML = `
     <h2>NEW BOOKING REQUEST${therapistNote}</h2>
     ${isSelectedTherapist ? '<p style="background: #28a745; color: white; padding: 10px; border-radius: 5px; font-weight: bold;">Customer specifically requested YOU!</p>' : ''}
@@ -953,28 +814,17 @@ function sendTherapistEmail(therapist) {
     </p>
   `;
 
-  console.log('About to send EmailJS request...');
-  console.log('EmailJS available:', typeof emailjs !== 'undefined');
-  console.log('EmailJS init available:', typeof emailjs !== 'undefined' && emailjs.init);
-
   if (typeof emailjs !== 'undefined' && emailjs.init) {
     const emailSubject = `Therapist - ${therapist.name} You've got a New Booking Request`;
     
-    console.log('Sending EmailJS request with parameters:');
-    console.log('- Service ID: service_puww2kb');
-    console.log('- Template ID: template_zh8jess');
-    console.log('- To name: ', therapist.name);
-    console.log('- To email: aidanleo@yahoo.co.uk');
-    console.log('- Subject: ', emailSubject);
-    
-    const emailParams = {
+    emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: therapist.name,
       to_email: 'aidanleo@yahoo.co.uk', // For testing
       subject: emailSubject,
-      message: summaryText, // Plain text fallback
-      message_html: simpleEmailHTML, // Use hyperlinks in HTML
-      html_message: simpleEmailHTML, // Alternative HTML field
-      html_content: simpleEmailHTML, // Another HTML field name
+      message: summaryText,
+      message_html: simpleEmailHTML,
+      html_message: simpleEmailHTML,
+      html_content: simpleEmailHTML,
       customer_name: customerName,
       customer_email: customerEmail,
       customer_phone: customerPhone,
@@ -982,19 +832,11 @@ function sendTherapistEmail(therapist) {
       therapist_name: therapist.name,
       accept_link: acceptUrl,
       decline_link: declineUrl
-    };
-    
-    console.log('Full EmailJS parameters:', emailParams);
-    
-    emailjs.send('service_puww2kb','template_zh8jess', emailParams, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Email sent to therapist successfully:', therapist.name, response);
-      console.log('EmailJS response details:', response);
+    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+      // Email sent successfully
     }).catch(err => {
       console.error('Email failed for therapist:', therapist.name, err);
-      console.error('EmailJS error details:', err);
     });
-  } else {
-    console.error('EmailJS not available for therapist email');
   }
 }
 
@@ -1004,18 +846,11 @@ function sendAdminNotification(booking, therapistName) {
   // This could be used to notify admin of accepted bookings
 }
 
-// Send confirmation email to customer - now includes therapist name
+// Send confirmation email to customer
 function sendCustomerConfirmationEmail(booking, therapistName) {
-  console.log('Sending customer confirmation email...');
-  console.log('Booking data received:', booking);
-  console.log('Customer email from booking:', booking.customerEmail);
-
   const customerName = booking.customerName;
   const customerEmail = booking.customerEmail;
 
-  console.log('Final customer email being used:', customerEmail);
-
-  // Updated HTML to match the therapist email style with better formatting
   const customerEmailHTML = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
       <div style="text-align: center; margin-bottom: 30px;">
@@ -1064,12 +899,11 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
   `;
 
   if (typeof emailjs !== 'undefined' && emailjs.init) {
-    console.log('Attempting to send customer confirmation email to:', customerEmail);
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
-      to_email: customerEmail, // Send to customer's actual email
+      to_email: customerEmail,
       subject: 'Booking Confirmed',
-      message: `Booking confirmed! ${therapistName} has accepted your booking for ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`, // Plain text fallback
+      message: `Booking confirmed! ${therapistName} has accepted your booking for ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`,
       message_html: customerEmailHTML,
       html_message: customerEmailHTML,
       html_content: customerEmailHTML,
@@ -1077,12 +911,10 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
       customer_email: customerEmail,
       booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Customer confirmation email sent successfully to:', customerEmail, response);
+      // Email sent successfully
     }).catch(err => {
-      console.error('Customer confirmation email failed for:', customerEmail, err);
+      console.error('Customer confirmation email failed:', err);
     });
-  } else {
-    console.error('EmailJS not available for customer email');
   }
 }
 
@@ -1149,11 +981,8 @@ function showSimpleConfirmation(therapistName, booking) {
 
 // Start countdown timer
 function startCountdown() {
-  console.log('Starting countdown timer for therapist index:', currentTherapistIndex);
-  
   const timerElement = document.getElementById('timeRemaining');
   if (!timerElement) {
-    console.error('Timer element not found');
     return;
   }
   
@@ -1168,12 +997,11 @@ function startCountdown() {
   timerElement.textContent = `${timeRemaining} seconds`;
   
   therapistTimeout = setInterval(() => {
-    // Check multiple conditions to stop the timer
+    // Check if booking was accepted
     const acceptedBookingId = localStorage.getItem('acceptedBookingId');
     const sessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
     
     if (bookingAccepted || acceptedBookingId || sessionBookingAccepted) {
-      console.log('Booking accepted, stopping timer. bookingAccepted:', bookingAccepted, 'acceptedBookingId:', acceptedBookingId, 'sessionBookingAccepted:', sessionBookingAccepted);
       clearInterval(therapistTimeout);
       therapistTimeout = null;
       return;
@@ -1183,7 +1011,6 @@ function startCountdown() {
     timerElement.textContent = `${timeRemaining} seconds`;
     
     if (timeRemaining <= 0) {
-      console.log('Timer expired for therapist index:', currentTherapistIndex);
       clearInterval(therapistTimeout);
       therapistTimeout = null;
       
@@ -1192,20 +1019,17 @@ function startCountdown() {
       const finalSessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
       
       if (finalAcceptedBookingId || finalSessionBookingAccepted) {
-        console.log('Booking was accepted during countdown, stopping process');
         return;
       }
       
       // Move to next therapist
       currentTherapistIndex++;
-      console.log('Moving to next therapist, index:', currentTherapistIndex);
       
       if (currentTherapistIndex < availableTherapists.length) {
         // Send request to next therapist
         sendRequestToCurrentTherapist();
       } else {
         // No more therapists available
-        console.log('No more therapists available');
         document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
         document.getElementById('therapistStatus').innerHTML = '<p style="color: red;">No therapists responded in time.</p>';
       }
@@ -1233,7 +1057,7 @@ function stopTherapistAssignment(reason) {
   console.log('Therapist assignment stopped successfully');
 }
 
-// Send customer acknowledgment email when booking request is submitted
+// Send customer acknowledgment email
 function sendCustomerAcknowledgmentEmail(booking) {
   console.log('Sending customer acknowledgment email...');
   console.log('Booking data received:', booking);
@@ -1301,7 +1125,7 @@ function sendCustomerAcknowledgmentEmail(booking) {
       to_name: customerName,
       to_email: customerEmail,
       subject: 'Booking Request Received',
-      message: `Your booking request has been received! We're contacting ${booking.therapistName} for your ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`, // Plain text fallback
+      message: `Your booking request has been received! We're contacting ${booking.therapistName} for your ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`,
       message_html: acknowledgmentHTML,
       html_message: acknowledgmentHTML,
       html_content: acknowledgmentHTML,
@@ -1311,9 +1135,7 @@ function sendCustomerAcknowledgmentEmail(booking) {
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
       console.log('Customer acknowledgment email sent successfully to:', customerEmail, response);
     }).catch(err => {
-      console.error('Customer acknowledgment email failed for:', customerEmail, err);
+      console.error('Customer acknowledgment email failed:', err);
     });
-  } else {
-    console.error('EmailJS not available for customer acknowledgment email');
   }
 }
