@@ -296,6 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentTherapistIndex = 0;
   let therapistTimeout = null;
   let timeRemaining = 120; // 2 minutes per therapist
+  let bookingId = null; // Unique booking ID
 
   // Initialize EmailJS
   function initEmailJS() {
@@ -315,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function() {
           alert(result.error.message);
           return;
         }
-        // Store payment method for later use
+        // Store payment method ID for later use
         window.paymentMethodId = result.paymentMethod.id;
         startBookingRequest();
       });
@@ -327,6 +328,9 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   function startBookingRequest() {
+    // Generate unique booking ID
+    bookingId = 'booking_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
     // Check if booking was already accepted in another tab
     const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
     if (alreadyAccepted) {
@@ -346,6 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.removeItem('bookingAccepted');
     localStorage.removeItem('acceptedTherapist');
     localStorage.removeItem('acceptedBookingData');
+    localStorage.removeItem('acceptedBookingId');
     
     // Send acknowledgment email to customer
     sendCustomerAcknowledgmentEmail();
@@ -397,8 +402,8 @@ document.addEventListener('DOMContentLoaded', function() {
       price: calculatePrice()
     };
 
-    const acceptUrl = `${window.location.origin}${window.location.pathname}?action=accept&therapist=${encodeURIComponent(therapist.name)}&booking=${encodeURIComponent(JSON.stringify(bookingData))}`;
-    const declineUrl = `${window.location.origin}${window.location.pathname}?action=decline&therapist=${encodeURIComponent(therapist.name)}&booking=${encodeURIComponent(JSON.stringify(bookingData))}`;
+    const acceptUrl = `${window.location.origin}${window.location.pathname}?action=accept&therapist=${encodeURIComponent(therapist.name)}&booking=${encodeURIComponent(JSON.stringify(bookingData))}&bookingId=${bookingId}`;
+    const declineUrl = `${window.location.origin}${window.location.pathname}?action=decline&therapist=${encodeURIComponent(therapist.name)}&booking=${encodeURIComponent(JSON.stringify(bookingData))}&bookingId=${bookingId}`;
 
     const emailHTML = `
       <h2>NEW BOOKING REQUEST</h2>
@@ -487,6 +492,22 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
+      // Check for URL parameters (Accept/Decline clicks)
+      const currentUrlParams = new URLSearchParams(window.location.search);
+      const currentAction = currentUrlParams.get('action');
+      const currentTherapistName = currentUrlParams.get('therapist');
+      const currentBookingData = currentUrlParams.get('booking');
+      const receivedBookingId = currentUrlParams.get('bookingId');
+      
+      if (currentAction && currentTherapistName && currentBookingData && receivedBookingId) {
+        // Clear the URL parameters to prevent multiple processing
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Handle the response immediately
+        handleTherapistResponse(currentAction, currentTherapistName, JSON.parse(decodeURIComponent(currentBookingData)), receivedBookingId);
+        return;
+      }
+      
       timeRemaining--;
       timerElement.textContent = `${timeRemaining} seconds`;
       
@@ -516,15 +537,26 @@ document.addEventListener('DOMContentLoaded', function() {
   const action = urlParams.get('action');
   const therapistName = urlParams.get('therapist');
   const bookingData = urlParams.get('booking');
+  const receivedBookingId = urlParams.get('bookingId');
   
-  if (action && therapistName && bookingData) {
+  if (action && therapistName && bookingData && receivedBookingId) {
     setTimeout(() => {
-      handleTherapistResponse(action, therapistName, JSON.parse(decodeURIComponent(bookingData)));
+      handleTherapistResponse(action, therapistName, JSON.parse(decodeURIComponent(bookingData)), receivedBookingId);
     }, 100);
   }
 
-  function handleTherapistResponse(action, therapistName, bookingData) {
+  function handleTherapistResponse(action, therapistName, bookingData, receivedBookingId) {
+    console.log('Handling therapist response:', action, therapistName, 'Booking ID:', receivedBookingId);
+    
     if (action === 'accept') {
+      // Check if this booking has already been accepted by another therapist
+      const acceptedBookingId = localStorage.getItem('acceptedBookingId');
+      if (acceptedBookingId && acceptedBookingId !== receivedBookingId) {
+        console.log('Booking already accepted by another therapist');
+        showAlreadyAcceptedMessage();
+        return;
+      }
+      
       // IMMEDIATELY stop all processes
       bookingAccepted = true;
       if (therapistTimeout) {
@@ -536,6 +568,9 @@ document.addEventListener('DOMContentLoaded', function() {
       localStorage.setItem('bookingAccepted', 'true');
       localStorage.setItem('acceptedTherapist', therapistName);
       localStorage.setItem('acceptedBookingData', JSON.stringify(bookingData));
+      localStorage.setItem('acceptedBookingId', receivedBookingId);
+      
+      console.log('Booking accepted by:', therapistName);
       
       // Send confirmation email to customer
       sendCustomerConfirmationEmail(bookingData, therapistName);
@@ -543,6 +578,8 @@ document.addEventListener('DOMContentLoaded', function() {
       // Show confirmation page
       showConfirmationPage(bookingData, therapistName);
     } else if (action === 'decline') {
+      console.log('Booking declined by:', therapistName);
+      
       // Move to next therapist or show decline message
       currentTherapistIndex++;
       if (currentTherapistIndex < availableTherapists.length) {
@@ -607,6 +644,20 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           <p style="color: #666; font-size: 14px; margin-top: 30px;">
             Thank you for choosing Rejuvenators Mobile Massage!
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  function showAlreadyAcceptedMessage() {
+    document.documentElement.innerHTML = `
+      <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+          <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
+          <h1 style="color: #f0ad4e; margin-bottom: 20px;">Booking Already Accepted</h1>
+          <p style="font-size: 18px; color: #666;">
+            This booking has already been accepted by another therapist.
           </p>
         </div>
       </div>
