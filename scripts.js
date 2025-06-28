@@ -549,9 +549,9 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Handling therapist response:', action, therapistName, 'Booking ID:', receivedBookingId);
     
     if (action === 'accept') {
-      // Check if this booking has already been accepted by another therapist
-      const acceptedBookingId = localStorage.getItem('acceptedBookingId');
-      if (acceptedBookingId && acceptedBookingId !== receivedBookingId) {
+      // Check if ANY booking has already been accepted
+      const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
+      if (alreadyAccepted) {
         console.log('Booking already accepted by another therapist');
         showAlreadyAcceptedMessage();
         return;
