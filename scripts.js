@@ -268,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize Stripe
     if (typeof Stripe !== 'undefined') {
-      stripe = Stripe('pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'); // Replace with your Stripe test key
+      stripe = Stripe('pk_test_51PGxKUKn3GaB6FyY1qeTOeYxWnBMDax8bUZhdP7RggDi1OyUp4BbSJWPhgb7hcvDynNqakuSfpGzwfuVhOsTvXmb001lwoCn7a');
       const elements = stripe.elements();
       card = elements.create('card');
       document.getElementById('card-element').innerHTML = '';
