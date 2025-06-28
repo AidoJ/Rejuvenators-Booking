@@ -472,7 +472,9 @@ document.addEventListener('DOMContentLoaded', function() {
     therapistTimeout = setInterval(() => {
       // Check if booking was accepted (persists across page reloads)
       const wasAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
-      if (wasAccepted) {
+      const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
+      
+      if (wasAccepted && acceptedBookingId === bookingId) {
         console.log('Booking was accepted - stopping timer');
         clearInterval(therapistTimeout);
         therapistTimeout = null;
@@ -500,6 +502,21 @@ document.addEventListener('DOMContentLoaded', function() {
       if (timeRemaining <= 0) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
+        
+        // Check again if booking was accepted before showing timeout message
+        const finalCheckAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+        const finalCheckBookingId = sessionStorage.getItem('acceptedBookingId');
+        
+        if (finalCheckAccepted && finalCheckBookingId === bookingId) {
+          // Booking was accepted, show confirmation instead of timeout
+          const acceptedTherapist = sessionStorage.getItem('acceptedTherapist');
+          const acceptedBookingData = sessionStorage.getItem('acceptedBookingData');
+          if (acceptedTherapist && acceptedBookingData) {
+            const parsedBookingData = JSON.parse(decodeURIComponent(acceptedBookingData));
+            showConfirmationPage(parsedBookingData, acceptedTherapist);
+          }
+          return;
+        }
         
         currentTherapistIndex++;
         
@@ -541,10 +558,34 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (action && therapistName && bookingData && receivedBookingId) {
     if (action === 'accept') {
-      // 1. Mark as accepted so startCountdown() picks it up
+      // Check if this booking was already accepted by another therapist
+      const alreadyAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+      const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
+      
+      if (alreadyAccepted && acceptedBookingId !== receivedBookingId) {
+        // Show "Already booked" message
+        document.documentElement.innerHTML = `
+          <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+              <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
+              <h1 style="color: #ffc107; margin-bottom: 20px;">Booking Already Accepted</h1>
+              <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
+                This booking has already been accepted by another therapist.
+              </p>
+              <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                Thank you for your interest!
+              </p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      // 1. Mark as accepted with booking ID
       sessionStorage.setItem('bookingAccepted', 'true');
       sessionStorage.setItem('acceptedTherapist', therapistName);
       sessionStorage.setItem('acceptedBookingData', bookingData);
+      sessionStorage.setItem('acceptedBookingId', receivedBookingId);
 
       // 2. *Also* clear any running timeout in this context
       if (therapistTimeout) {
