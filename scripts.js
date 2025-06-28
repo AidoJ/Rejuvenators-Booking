@@ -196,8 +196,27 @@ document.addEventListener('DOMContentLoaded', function() {
       sel.onchange = function() {
         selectedTherapist = JSON.parse(this.value);
       };
+      
+      // Enable the request button
+      document.getElementById('requestBtn').disabled = false;
     }
   }
+
+  // Request Booking button handler
+  document.getElementById('requestBtn').onclick = function() {
+    // Ensure we have the selected therapist
+    const therapistSelect = document.getElementById('therapistSelect');
+    if (therapistSelect) {
+      selectedTherapist = JSON.parse(therapistSelect.value);
+    }
+    
+    if (selectedTherapist) {
+      // Navigate to payment step
+      show('step7');
+    } else {
+      alert('Please select a therapist first.');
+    }
+  };
 
   // --- Payment Integration ---
   let stripe, card;
