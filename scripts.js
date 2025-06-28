@@ -331,6 +331,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Generate unique booking ID
     bookingId = 'booking_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
+    // Clear any previous acceptance data
+    sessionStorage.removeItem('bookingAccepted');
+    sessionStorage.removeItem('acceptedTherapist');
+    sessionStorage.removeItem('acceptedBookingData');
+    
     show('step8');
     bookingAccepted = false;
     currentTherapistIndex = 0;
@@ -465,6 +470,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) clearInterval(therapistTimeout);
     
     therapistTimeout = setInterval(() => {
+      // Check if booking was accepted (persists across page reloads)
+      const wasAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+      if (wasAccepted) {
+        console.log('Booking was accepted - stopping timer');
+        clearInterval(therapistTimeout);
+        therapistTimeout = null;
+        
+        // Get the accepted data and show confirmation
+        const acceptedTherapist = sessionStorage.getItem('acceptedTherapist');
+        const acceptedBookingData = sessionStorage.getItem('acceptedBookingData');
+        
+        if (acceptedTherapist && acceptedBookingData) {
+          const parsedBookingData = JSON.parse(decodeURIComponent(acceptedBookingData));
+          showConfirmationPage(parsedBookingData, acceptedTherapist);
+        }
+        return;
+      }
+      
       if (bookingAccepted) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
@@ -498,12 +521,13 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (action && therapistName && bookingData && receivedBookingId) {
     if (action === 'accept') {
-      // IMMEDIATELY stop everything
-      bookingAccepted = true;
-      if (therapistTimeout) {
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
-      }
+      // IMMEDIATELY stop everything and mark as accepted
+      sessionStorage.setItem('bookingAccepted', 'true');
+      sessionStorage.setItem('acceptedTherapist', therapistName);
+      sessionStorage.setItem('acceptedBookingData', bookingData);
+      
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
       
       const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
       
