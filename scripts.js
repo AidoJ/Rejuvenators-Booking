@@ -220,6 +220,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if (selectedTherapist) {
+      // Reorder availableTherapists to put the selected therapist first
+      const otherTherapists = availableTherapists.filter(t => t.name !== selectedTherapist.name);
+      availableTherapists = [selectedTherapist, ...otherTherapists];
+      
       // Navigate to payment step
       show('step7');
     } else {
@@ -323,9 +327,25 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   function startBookingRequest() {
+    // Check if booking was already accepted in another tab
+    const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
+    if (alreadyAccepted) {
+      const acceptedTherapist = localStorage.getItem('acceptedTherapist');
+      const acceptedBookingData = localStorage.getItem('acceptedBookingData');
+      if (acceptedTherapist && acceptedBookingData) {
+        showConfirmationPage(JSON.parse(acceptedBookingData), acceptedTherapist);
+        return;
+      }
+    }
+    
     show('step8');
     bookingAccepted = false;
     currentTherapistIndex = 0;
+    
+    // Clear any previous acceptance data
+    localStorage.removeItem('bookingAccepted');
+    localStorage.removeItem('acceptedTherapist');
+    localStorage.removeItem('acceptedBookingData');
     
     // Send acknowledgment email to customer
     sendCustomerAcknowledgmentEmail();
@@ -335,7 +355,9 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function sendRequestToCurrentTherapist() {
-    if (bookingAccepted || currentTherapistIndex >= availableTherapists.length) {
+    // Check if booking was already accepted
+    const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
+    if (alreadyAccepted || bookingAccepted || currentTherapistIndex >= availableTherapists.length) {
       if (currentTherapistIndex >= availableTherapists.length) {
         document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
       }
@@ -343,7 +365,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const therapist = availableTherapists[currentTherapistIndex];
-    document.getElementById('requestMsg').innerText = `Sending request to ${therapist.name}...`;
+    
+    // Update UI based on whether this is the selected therapist or a fallback
+    if (currentTherapistIndex === 0) {
+      document.getElementById('requestMsg').innerText = `Sending request to ${therapist.name} (your selected therapist)...`;
+    } else {
+      document.getElementById('requestMsg').innerText = `${selectedTherapist.name} did not respond. Now trying ${therapist.name}...`;
+    }
+    
     document.getElementById('currentTherapist').textContent = therapist.name;
     
     // Send email to therapist
@@ -450,8 +479,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) clearInterval(therapistTimeout);
     
     therapistTimeout = setInterval(() => {
-      if (bookingAccepted) {
+      // Check if booking was already accepted
+      const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
+      if (bookingAccepted || alreadyAccepted) {
         clearInterval(therapistTimeout);
+        therapistTimeout = null;
         return;
       }
       
@@ -460,6 +492,14 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (timeRemaining <= 0) {
         clearInterval(therapistTimeout);
+        therapistTimeout = null;
+        
+        // Final check before moving to next therapist
+        const finalAccepted = localStorage.getItem('bookingAccepted') === 'true';
+        if (finalAccepted) {
+          return;
+        }
+        
         currentTherapistIndex++;
         
         if (currentTherapistIndex < availableTherapists.length) {
@@ -485,8 +525,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function handleTherapistResponse(action, therapistName, bookingData) {
     if (action === 'accept') {
+      // IMMEDIATELY stop all processes
       bookingAccepted = true;
-      if (therapistTimeout) clearInterval(therapistTimeout);
+      if (therapistTimeout) {
+        clearInterval(therapistTimeout);
+        therapistTimeout = null;
+      }
+      
+      // Store acceptance in localStorage to prevent other tabs from continuing
+      localStorage.setItem('bookingAccepted', 'true');
+      localStorage.setItem('acceptedTherapist', therapistName);
+      localStorage.setItem('acceptedBookingData', JSON.stringify(bookingData));
       
       // Send confirmation email to customer
       sendCustomerConfirmationEmail(bookingData, therapistName);
