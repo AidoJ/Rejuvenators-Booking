@@ -505,9 +505,13 @@ function showAlreadyAcceptedMessage() {
 // Send customer decline email
 function sendCustomerDeclineEmail(booking, therapistName) {
   console.log('Sending customer decline email...');
+  console.log('Booking data received:', booking);
+  console.log('Customer email from booking:', booking.customerEmail);
 
   const customerName = booking.customerName;
   const customerEmail = booking.customerEmail;
+
+  console.log('Final customer email being used:', customerEmail);
 
   const declineHTML = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
@@ -557,7 +561,7 @@ function sendCustomerDeclineEmail(booking, therapistName) {
   `;
 
   if (typeof emailjs !== 'undefined' && emailjs.init) {
-    console.log('Attempting to send customer decline email...');
+    console.log('Attempting to send customer decline email to:', customerEmail);
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
       to_email: customerEmail,
@@ -570,9 +574,9 @@ function sendCustomerDeclineEmail(booking, therapistName) {
       customer_email: customerEmail,
       booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Customer decline email sent successfully:', response);
+      console.log('Customer decline email sent successfully to:', customerEmail, response);
     }).catch(err => {
-      console.error('Customer decline email failed:', err);
+      console.error('Customer decline email failed for:', customerEmail, err);
     });
   } else {
     console.error('EmailJS not available for customer decline email');
@@ -730,6 +734,13 @@ function startTherapistAssignment() {
   const address = document.getElementById('address').value;
   const price = calculatePrice();
   
+  console.log('Form data captured:');
+  console.log('Customer name:', customerName);
+  console.log('Customer email from form:', customerEmail);
+  console.log('Customer phone:', customerPhone);
+  console.log('Address:', address);
+  console.log('Price:', price);
+  
   const bookingData = {
     customerName: customerName,
     customerEmail: customerEmail,
@@ -743,6 +754,8 @@ function startTherapistAssignment() {
     price: price,
     therapistName: selectedTherapistName
   };
+  
+  console.log('Booking data object created:', bookingData);
   
   // Send acknowledgment email to customer
   sendCustomerAcknowledgmentEmail(bookingData);
@@ -929,9 +942,13 @@ function sendAdminNotification(booking, therapistName) {
 // Send confirmation email to customer - now includes therapist name
 function sendCustomerConfirmationEmail(booking, therapistName) {
   console.log('Sending customer confirmation email...');
+  console.log('Booking data received:', booking);
+  console.log('Customer email from booking:', booking.customerEmail);
 
   const customerName = booking.customerName;
   const customerEmail = booking.customerEmail;
+
+  console.log('Final customer email being used:', customerEmail);
 
   // Updated HTML to match the therapist email style with better formatting
   const customerEmailHTML = `
@@ -982,7 +999,7 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
   `;
 
   if (typeof emailjs !== 'undefined' && emailjs.init) {
-    console.log('Attempting to send customer confirmation email...');
+    console.log('Attempting to send customer confirmation email to:', customerEmail);
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
       to_email: customerEmail, // Send to customer's actual email
@@ -995,9 +1012,9 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
       customer_email: customerEmail,
       booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Customer confirmation email sent successfully:', response);
+      console.log('Customer confirmation email sent successfully to:', customerEmail, response);
     }).catch(err => {
-      console.error('Customer confirmation email failed:', err);
+      console.error('Customer confirmation email failed for:', customerEmail, err);
     });
   } else {
     console.error('EmailJS not available for customer email');
@@ -1154,9 +1171,13 @@ function stopTherapistAssignment(reason) {
 // Send customer acknowledgment email when booking request is submitted
 function sendCustomerAcknowledgmentEmail(booking) {
   console.log('Sending customer acknowledgment email...');
+  console.log('Booking data received:', booking);
+  console.log('Customer email from booking:', booking.customerEmail);
 
   const customerName = booking.customerName;
   const customerEmail = booking.customerEmail;
+
+  console.log('Final customer email being used:', customerEmail);
 
   const acknowledgmentHTML = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
@@ -1210,7 +1231,7 @@ function sendCustomerAcknowledgmentEmail(booking) {
   `;
 
   if (typeof emailjs !== 'undefined' && emailjs.init) {
-    console.log('Attempting to send customer acknowledgment email...');
+    console.log('Attempting to send customer acknowledgment email to:', customerEmail);
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
       to_email: customerEmail,
@@ -1223,9 +1244,9 @@ function sendCustomerAcknowledgmentEmail(booking) {
       customer_email: customerEmail,
       booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
     }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Customer acknowledgment email sent successfully:', response);
+      console.log('Customer acknowledgment email sent successfully to:', customerEmail, response);
     }).catch(err => {
-      console.error('Customer acknowledgment email failed:', err);
+      console.error('Customer acknowledgment email failed for:', customerEmail, err);
     });
   } else {
     console.error('EmailJS not available for customer acknowledgment email');
