@@ -485,6 +485,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('Starting countdown timer...');
     
+    // Add a more frequent check for URL parameters
+    const urlCheckInterval = setInterval(() => {
+      const currentUrlParams = new URLSearchParams(window.location.search);
+      const currentAction = currentUrlParams.get('action');
+      const currentTherapistName = currentUrlParams.get('therapist');
+      const currentBookingData = currentUrlParams.get('booking');
+      const receivedBookingId = currentUrlParams.get('bookingId');
+      
+      if (currentAction && currentTherapistName && currentBookingData && receivedBookingId) {
+        console.log('URL parameters detected in frequent check!');
+        clearInterval(urlCheckInterval);
+        clearInterval(therapistTimeout);
+        therapistTimeout = null;
+        
+        // Clear the URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Handle the response immediately
+        handleTherapistResponse(currentAction, currentTherapistName, JSON.parse(decodeURIComponent(currentBookingData)), receivedBookingId);
+        return;
+      }
+    }, 500); // Check every 500ms
+    
     therapistTimeout = setInterval(() => {
       // Check if booking was already accepted
       const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
@@ -493,6 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (bookingAccepted || alreadyAccepted) {
         console.log('Stopping timer - booking already accepted');
         clearInterval(therapistTimeout);
+        clearInterval(urlCheckInterval);
         therapistTimeout = null;
         return;
       }
@@ -513,6 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (currentAction && currentTherapistName && currentBookingData && receivedBookingId) {
         console.log('URL parameters detected! Processing response...');
+        clearInterval(urlCheckInterval);
         // Clear the URL parameters to prevent multiple processing
         window.history.replaceState({}, document.title, window.location.pathname);
         
@@ -527,6 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (timeRemaining <= 0) {
         console.log('Timer expired, moving to next therapist');
         clearInterval(therapistTimeout);
+        clearInterval(urlCheckInterval);
         therapistTimeout = null;
         
         // Final check before moving to next therapist
@@ -546,6 +572,18 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }, 1000);
   }
+
+  // Add window.onpopstate listener to catch URL changes
+  window.addEventListener('popstate', function(event) {
+    console.log('URL changed detected via popstate');
+    checkForUrlParameters();
+  });
+
+  // Add window.onhashchange listener as backup
+  window.addEventListener('hashchange', function(event) {
+    console.log('Hash change detected');
+    checkForUrlParameters();
+  });
 
   // Handle therapist response from URL parameters
   const urlParams = new URLSearchParams(window.location.search);
