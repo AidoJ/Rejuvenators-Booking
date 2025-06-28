@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         if (availableTherapists.length === 0) {
-          selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Unfortunately we don\'t have any therapists available in your area right now.</p>';
+          selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Unfortunately we\'re don\'t have any therapists available in your area right now.</p>';
           // Disable the request button
           const requestBtn = document.getElementById('requestBtn');
           if (requestBtn) {
@@ -450,9 +450,21 @@ function handleTherapistResponse(action, therapistName, bookingData, receivedBoo
     if (action === 'accept') {
       console.log('Processing ACCEPT action...');
       
+      // IMMEDIATELY stop all processes
+      if (therapistTimeout) {
+        clearInterval(therapistTimeout);
+        therapistTimeout = null;
+      }
+      
       // Store the accepted booking ID to prevent duplicate acceptances
       localStorage.setItem('acceptedBookingId', receivedBookingId);
       bookingAccepted = true;
+      
+      // Update sessionStorage immediately
+      sessionStorage.setItem('bookingAccepted', 'true');
+      sessionStorage.setItem('acceptedBookingId', receivedBookingId);
+      
+      // Stop all therapist assignment processes
       stopTherapistAssignment('Therapist accepted.');
       
       // Send notifications
@@ -490,8 +502,113 @@ function showAlreadyAcceptedMessage() {
   `;
 }
 
+// Send customer decline email
+function sendCustomerDeclineEmail(booking, therapistName) {
+  console.log('Sending customer decline email...');
+
+  const customerName = booking.customerName;
+  const customerEmail = booking.customerEmail;
+
+  const declineHTML = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="font-size: 48px; margin-bottom: 10px;">❌</div>
+        <h1 style="color: #dc3545; margin-bottom: 10px;">Booking Declined</h1>
+        <p style="color: #666; font-size: 16px;">Your booking request has been declined</p>
+      </div>
+      
+      <div style="background: #f8d7da; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+        <h3 style="color: #721c24; margin-top: 0;">❌ Your booking has been declined</h3>
+        <p><strong>Therapist:</strong> ${therapistName}</p>
+      </div>
+      
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Your Details</h3>
+        <p><strong>Name:</strong> ${customerName}</p>
+        <p><strong>Email:</strong> ${customerEmail}</p>
+      </div>
+      
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Booking Details</h3>
+        <p><strong>Address For Massage:</strong> ${booking.address}</p>
+        <p><strong>Service:</strong> ${booking.service}</p>
+        <p><strong>Duration:</strong> ${booking.duration} min</p>
+        <p><strong>Date:</strong> ${booking.date}</p>
+        <p><strong>Time:</strong> ${booking.time}</p>
+        <p><strong>Parking:</strong> ${booking.parking}</p>
+        <p><strong>Total Price:</strong> $${booking.price}</p>
+      </div>
+      
+      <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107;">
+        <p style="margin: 0; color: #856404;"><strong>Payment Information:</strong> Your payment has not been processed and no charges have been made to your card.</p>
+      </div>
+      
+      <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+        <h3 style="color: #28a745; margin-top: 0;">What's Next?</h3>
+        <p>You can submit a new booking request at any time. We apologize for any inconvenience and hope to serve you in the future.</p>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
+        <p><strong>Rejuvenators Mobile Massage</strong></p>
+        <p>Bringing wellness to your doorstep</p>
+        <p style="font-size: 12px;">If you have any questions, please don't hesitate to contact us</p>
+      </div>
+    </div>
+  `;
+
+  if (typeof emailjs !== 'undefined' && emailjs.init) {
+    console.log('Attempting to send customer decline email...');
+    emailjs.send('service_puww2kb','template_zh8jess', {
+      to_name: customerName,
+      to_email: customerEmail,
+      subject: 'Booking Declined',
+      message: `Your booking request has been declined by ${therapistName} for ${booking.service} on ${booking.date} at ${booking.time}. No charges have been made to your card.`, // Plain text fallback
+      message_html: declineHTML,
+      html_message: declineHTML,
+      html_content: declineHTML,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
+    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+      console.log('Customer decline email sent successfully:', response);
+    }).catch(err => {
+      console.error('Customer decline email failed:', err);
+    });
+  } else {
+    console.error('EmailJS not available for customer decline email');
+  }
+}
+
 // Show decline message
 function showDeclineMessage(therapistName) {
+  // Try to get booking data from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const bookingData = urlParams.get('b') || urlParams.get('booking');
+  
+  if (bookingData) {
+    try {
+      const booking = JSON.parse(decodeURIComponent(bookingData));
+      const fullBooking = {
+        customerName: booking.customerName || booking.n,
+        customerEmail: booking.customerEmail || booking.e,
+        customerPhone: booking.customerPhone || booking.p,
+        address: booking.address || booking.a,
+        service: booking.service || booking.s,
+        duration: booking.duration || booking.d,
+        date: booking.date || booking.dt,
+        time: booking.time || booking.tm,
+        parking: booking.parking || booking.pk,
+        price: booking.price || booking.pr,
+        therapistName: booking.therapistName || booking.tn
+      };
+      
+      // Send decline email to customer
+      sendCustomerDeclineEmail(fullBooking, therapistName);
+    } catch (e) {
+      console.error('Error parsing booking data for decline email:', e);
+    }
+  }
+  
   document.documentElement.innerHTML = `
     <div style="text-align: center; padding: 50px 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
       <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
@@ -606,6 +723,30 @@ function startTherapistAssignment() {
   isInFallbackMode = false;
   show('step7');
   
+  // Send customer acknowledgment email
+  const customerName = document.getElementById('customerName').value;
+  const customerEmail = document.getElementById('customerEmail').value;
+  const customerPhone = document.getElementById('customerPhone').value;
+  const address = document.getElementById('address').value;
+  const price = calculatePrice();
+  
+  const bookingData = {
+    customerName: customerName,
+    customerEmail: customerEmail,
+    customerPhone: customerPhone,
+    address: address,
+    service: document.getElementById('service').value,
+    duration: document.getElementById('duration').value,
+    date: document.getElementById('date').value,
+    time: document.getElementById('time').value,
+    parking: document.getElementById('parking').value,
+    price: price,
+    therapistName: selectedTherapistName
+  };
+  
+  // Send acknowledgment email to customer
+  sendCustomerAcknowledgmentEmail(bookingData);
+  
   // Update the UI to show we're contacting the selected therapist
   document.getElementById('requestMsg').innerText = `Sending request to ${selectedTherapistName}...`;
   
@@ -617,7 +758,12 @@ function startTherapistAssignment() {
 
 // Send request to current therapist
 function sendRequestToCurrentTherapist() {
-  if (bookingAccepted) {
+  // Check multiple conditions to prevent sending emails if already accepted
+  const acceptedBookingId = localStorage.getItem('acceptedBookingId');
+  const sessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+  
+  if (bookingAccepted || acceptedBookingId || sessionBookingAccepted) {
+    console.log('Booking already accepted, stopping therapist assignment. bookingAccepted:', bookingAccepted, 'acceptedBookingId:', acceptedBookingId, 'sessionBookingAccepted:', sessionBookingAccepted);
     stopTherapistAssignment('sendRequestToCurrentTherapist called but already accepted.');
     return;
   }
@@ -639,7 +785,11 @@ function sendRequestToCurrentTherapist() {
   console.log('Current therapist:', currentTherapist);
 
   // Final check before sending email
-  if (bookingAccepted) {
+  const finalAcceptedBookingId = localStorage.getItem('acceptedBookingId');
+  const finalSessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+  
+  if (bookingAccepted || finalAcceptedBookingId || finalSessionBookingAccepted) {
+    console.log('Booking accepted during processing, stopping therapist assignment.');
     stopTherapistAssignment('sendRequestToCurrentTherapist about to send email but already accepted.');
     return;
   }
@@ -670,10 +820,16 @@ function sendRequestToCurrentTherapist() {
 
 // Send email to therapist
 function sendTherapistEmail(therapist) {
-  if (bookingAccepted) {
+  // Check multiple conditions to prevent sending emails if already accepted
+  const acceptedBookingId = localStorage.getItem('acceptedBookingId');
+  const sessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+  
+  if (bookingAccepted || acceptedBookingId || sessionBookingAccepted) {
+    console.log('Booking already accepted, not sending email to therapist:', therapist.name);
     stopTherapistAssignment('sendTherapistEmail called but already accepted.');
     return;
   }
+  
   console.log('Sending email to therapist:', therapist.name);
 
   const price = calculatePrice();
@@ -745,6 +901,7 @@ function sendTherapistEmail(therapist) {
   emailjs.send('service_puww2kb','template_zh8jess', {
     to_name: therapist.name,
     to_email: 'aidanleo@yahoo.co.uk', // For testing
+    subject: `Therapist - ${therapist.name} You've got a New Booking Request`,
     message: summaryText, // Plain text fallback
     message_html: simpleEmailHTML, // Use hyperlinks in HTML
     html_message: simpleEmailHTML, // Alternative HTML field
@@ -829,6 +986,7 @@ function sendCustomerConfirmationEmail(booking, therapistName) {
     emailjs.send('service_puww2kb','template_zh8jess', {
       to_name: customerName,
       to_email: customerEmail, // Send to customer's actual email
+      subject: 'Booking Confirmed',
       message: `Booking confirmed! ${therapistName} has accepted your booking for ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`, // Plain text fallback
       message_html: customerEmailHTML,
       html_message: customerEmailHTML,
@@ -917,14 +1075,25 @@ function startCountdown() {
     return;
   }
   
+  // Clear any existing timer first
+  if (therapistTimeout) {
+    clearInterval(therapistTimeout);
+    therapistTimeout = null;
+  }
+  
   // Reset timer for current therapist
   timeRemaining = 120;
   timerElement.textContent = `${timeRemaining} seconds`;
   
   therapistTimeout = setInterval(() => {
-    if (bookingAccepted) {
-      console.log('Booking accepted, stopping timer');
+    // Check multiple conditions to stop the timer
+    const acceptedBookingId = localStorage.getItem('acceptedBookingId');
+    const sessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+    
+    if (bookingAccepted || acceptedBookingId || sessionBookingAccepted) {
+      console.log('Booking accepted, stopping timer. bookingAccepted:', bookingAccepted, 'acceptedBookingId:', acceptedBookingId, 'sessionBookingAccepted:', sessionBookingAccepted);
       clearInterval(therapistTimeout);
+      therapistTimeout = null;
       return;
     }
     
@@ -934,6 +1103,16 @@ function startCountdown() {
     if (timeRemaining <= 0) {
       console.log('Timer expired for therapist index:', currentTherapistIndex);
       clearInterval(therapistTimeout);
+      therapistTimeout = null;
+      
+      // Check again if booking was accepted during the countdown
+      const finalAcceptedBookingId = localStorage.getItem('acceptedBookingId');
+      const finalSessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+      
+      if (finalAcceptedBookingId || finalSessionBookingAccepted) {
+        console.log('Booking was accepted during countdown, stopping process');
+        return;
+      }
       
       // Move to next therapist
       currentTherapistIndex++;
@@ -970,4 +1149,85 @@ function stopTherapistAssignment(reason) {
   sessionStorage.setItem('acceptedBookingId', bookingId);
   
   console.log('Therapist assignment stopped successfully');
+}
+
+// Send customer acknowledgment email when booking request is submitted
+function sendCustomerAcknowledgmentEmail(booking) {
+  console.log('Sending customer acknowledgment email...');
+
+  const customerName = booking.customerName;
+  const customerEmail = booking.customerEmail;
+
+  const acknowledgmentHTML = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+        <h1 style="color: #00729B; margin-bottom: 10px;">Booking Request Received</h1>
+        <p style="color: #666; font-size: 16px;">We're contacting your selected therapist</p>
+      </div>
+      
+      <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2196f3;">
+        <h3 style="color: #1976d2; margin-top: 0;">📋 Your booking request has been received!</h3>
+        <p>We're currently contacting ${booking.therapistName} with your booking details. You'll receive a confirmation email as soon as they respond.</p>
+      </div>
+      
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Your Details</h3>
+        <p><strong>Name:</strong> ${customerName}</p>
+        <p><strong>Email:</strong> ${customerEmail}</p>
+      </div>
+      
+      <div style="background: #f5f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <h3 style="color: #005f7d; margin-top: 0;">Booking Details</h3>
+        <p><strong>Address For Massage:</strong> ${booking.address}</p>
+        <p><strong>Service:</strong> ${booking.service}</p>
+        <p><strong>Duration:</strong> ${booking.duration} min</p>
+        <p><strong>Date:</strong> ${booking.date}</p>
+        <p><strong>Time:</strong> ${booking.time}</p>
+        <p><strong>Parking:</strong> ${booking.parking}</p>
+        <p><strong>Total Price:</strong> $${booking.price}</p>
+        <p><strong>Selected Therapist:</strong> ${booking.therapistName}</p>
+      </div>
+      
+      <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107;">
+        <p style="margin: 0; color: #856404;"><strong>Payment Information:</strong> Your card details have been securely stored and will only be charged once ${booking.therapistName} accepts your booking.</p>
+      </div>
+      
+      <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+        <h3 style="color: #28a745; margin-top: 0;">What happens next?</h3>
+        <p>1. We'll contact ${booking.therapistName} with your booking details<br>
+           2. They have 120 seconds to respond<br>
+           3. You'll receive a confirmation email once they accept<br>
+           4. Your payment will be processed automatically</p>
+      </div>
+      
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px;">
+        <p><strong>Rejuvenators Mobile Massage</strong></p>
+        <p>Bringing wellness to your doorstep</p>
+        <p style="font-size: 12px;">If you have any questions, please don't hesitate to contact us</p>
+      </div>
+    </div>
+  `;
+
+  if (typeof emailjs !== 'undefined' && emailjs.init) {
+    console.log('Attempting to send customer acknowledgment email...');
+    emailjs.send('service_puww2kb','template_zh8jess', {
+      to_name: customerName,
+      to_email: customerEmail,
+      subject: 'Booking Request Received',
+      message: `Your booking request has been received! We're contacting ${booking.therapistName} for your ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`, // Plain text fallback
+      message_html: acknowledgmentHTML,
+      html_message: acknowledgmentHTML,
+      html_content: acknowledgmentHTML,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
+    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+      console.log('Customer acknowledgment email sent successfully:', response);
+    }).catch(err => {
+      console.error('Customer acknowledgment email failed:', err);
+    });
+  } else {
+    console.error('EmailJS not available for customer acknowledgment email');
+  }
 }
