@@ -60,23 +60,15 @@ function loadGoogleMapsAPIFallback() {
   }
 }
 
-// Initialize EmailJS
+// Initialize EmailJS once at startup
 function initEmailJS() {
-  if (typeof emailjs !== 'undefined') {
-    emailjs.init('V8qq2pjH8vfh3a6q3');
-    console.log('EmailJS initialized successfully');
-    
-    // Test EmailJS functionality
-    setTimeout(() => {
-      if (typeof emailjs !== 'undefined' && emailjs.init) {
-        console.log('EmailJS is ready for use');
-      } else {
-        console.error('EmailJS not properly initialized');
-      }
-    }, 1000);
-  } else {
-    console.error('EmailJS not loaded');
+  if (typeof emailjs === 'undefined') {
+    console.error('EmailJS SDK not loaded');
+    return;
   }
+  // Use your real Public Key here
+  emailjs.init('V8qq2pjH8vfh3a6q3');
+  console.log('✅ EmailJS initialized with Public Key');
 }
 
 function initAutocomplete() {
@@ -158,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Load Google Maps API securely
   loadGoogleMapsAPI();
   
-  // Initialize EmailJS
+  // Initialize EmailJS right after SDK loads
   initEmailJS();
   
   // Set up manual address input fallback
@@ -857,30 +849,33 @@ function sendTherapistEmail(therapist) {
     </p>
   `;
 
-  if (typeof emailjs !== 'undefined' && emailjs.init) {
-    const emailSubject = `Therapist - ${therapist.name} You've got a New Booking Request`;
-    
-    emailjs.send('service_puww2kb','template_zh8jess', {
-      to_name: therapist.name,
-      to_email: 'aidanleo@yahoo.co.uk', // For testing
-      subject: emailSubject,
-      message: summaryText,
-      message_html: simpleEmailHTML,
-      html_message: simpleEmailHTML,
-      html_content: simpleEmailHTML,
-      customer_name: customerName,
-      customer_email: customerEmail,
-      customer_phone: customerPhone,
-      address_for_massage: address,
-      therapist_name: therapist.name,
-      accept_link: acceptUrl,
-      decline_link: declineUrl
-    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      // Email sent successfully
-    }).catch(err => {
-      console.error('Email failed for therapist:', therapist.name, err);
-    });
+  if (typeof emailjs === 'undefined') {
+    console.error('EmailJS missing—cannot notify therapist');
+    return;
   }
+  
+  emailjs.send('service_puww2kb','template_zh8jess',{
+    to_name: therapist.name,
+    to_email: 'aidanleo@yahoo.co.uk', // For testing - use therapist.email for production
+    subject: `Therapist - ${therapist.name} You've got a New Booking Request`,
+    message: summaryText,
+    message_html: simpleEmailHTML,
+    html_message: simpleEmailHTML,
+    html_content: simpleEmailHTML,
+    customer_name: customerName,
+    customer_email: customerEmail,
+    customer_phone: customerPhone,
+    address_for_massage: address,
+    therapist_name: therapist.name,
+    accept_link: acceptUrl,
+    decline_link: declineUrl
+  })
+  .then(res => {
+    console.log(`✅ Therapist email sent to ${therapist.name}:`, res);
+  })
+  .catch(err => {
+    console.error(`❌ Therapist email error (${therapist.name}):`, err);
+  });
 }
 
 // Send admin notification (placeholder for now)
@@ -1102,14 +1097,8 @@ function stopTherapistAssignment(reason) {
 
 // Send customer acknowledgment email
 function sendCustomerAcknowledgmentEmail(booking) {
-  console.log('Sending customer acknowledgment email...');
-  console.log('Booking data received:', booking);
-  console.log('Customer email from booking:', booking.customerEmail);
-
   const customerName = booking.customerName;
   const customerEmail = booking.customerEmail;
-
-  console.log('Final customer email being used:', customerEmail);
 
   const acknowledgmentHTML = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
@@ -1162,23 +1151,27 @@ function sendCustomerAcknowledgmentEmail(booking) {
     </div>
   `;
 
-  if (typeof emailjs !== 'undefined' && emailjs.init) {
-    console.log('Attempting to send customer acknowledgment email to:', customerEmail);
-    emailjs.send('service_puww2kb','template_zh8jess', {
-      to_name: customerName,
-      to_email: customerEmail,
-      subject: 'Booking Request Received',
-      message: `Your booking request has been received! We're contacting ${booking.therapistName} for your ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`,
-      message_html: acknowledgmentHTML,
-      html_message: acknowledgmentHTML,
-      html_content: acknowledgmentHTML,
-      customer_name: customerName,
-      customer_email: customerEmail,
-      booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
-    }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-      console.log('Customer acknowledgment email sent successfully to:', customerEmail, response);
-    }).catch(err => {
-      console.error('Customer acknowledgment email failed:', err);
-    });
+  if (typeof emailjs === 'undefined') {
+    console.error('EmailJS missing—cannot send customer acknowledgment');
+    return;
   }
+  
+  emailjs.send('service_puww2kb','template_zh8jess',{
+    to_name: customerName,
+    to_email: customerEmail,
+    subject: 'Booking Request Received',
+    message: `Your booking request has been received! We're contacting ${booking.therapistName} for your ${booking.service} on ${booking.date} at ${booking.time}. Address: ${booking.address}. Total: $${booking.price}.`,
+    message_html: acknowledgmentHTML,
+    html_message: acknowledgmentHTML,
+    html_content: acknowledgmentHTML,
+    customer_name: customerName,
+    customer_email: customerEmail,
+    booking_details: `Service: ${booking.service}, Duration: ${booking.duration}min, Date: ${booking.date}, Time: ${booking.time}, Address: ${booking.address}, Price: $${booking.price}`
+  })
+  .then(res => {
+    console.log('✅ Acknowledgment email sent to customer:', customerEmail, res);
+  })
+  .catch(err => {
+    console.error('❌ Acknowledgment email error:', err);
+  });
 }
