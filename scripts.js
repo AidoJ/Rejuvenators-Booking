@@ -62,9 +62,20 @@ function loadGoogleMapsAPIFallback() {
 
 // Initialize EmailJS
 function initEmailJS() {
+  console.log('=== initEmailJS called ===');
+  console.log('EmailJS available:', typeof emailjs !== 'undefined');
+  
   if (typeof emailjs !== 'undefined') {
-    emailjs.init('V8qq2pjH8vfh3a6q3');
-    console.log('EmailJS v3 initialized successfully');
+    console.log('EmailJS version:', emailjs.version);
+    console.log('EmailJS init function available:', typeof emailjs.init === 'function');
+    
+    try {
+      emailjs.init('V8qq2pjH8vfh3a6q3');
+      console.log('EmailJS v3 initialized successfully');
+      console.log('EmailJS init status:', emailjs.init);
+    } catch (error) {
+      console.error('Error initializing EmailJS:', error);
+    }
   } else {
     console.log('EmailJS not loaded');
   }
@@ -771,9 +782,16 @@ function startTherapistAssignment() {
 
 // Send request to current therapist
 function sendRequestToCurrentTherapist() {
+  console.log('=== sendRequestToCurrentTherapist called ===');
+  
   // Check multiple conditions to prevent sending emails if already accepted
   const acceptedBookingId = localStorage.getItem('acceptedBookingId');
   const sessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+  
+  console.log('Checking acceptance status:');
+  console.log('- bookingAccepted:', bookingAccepted);
+  console.log('- acceptedBookingId:', acceptedBookingId);
+  console.log('- sessionBookingAccepted:', sessionBookingAccepted);
   
   if (bookingAccepted || acceptedBookingId || sessionBookingAccepted) {
     console.log('Booking already accepted, stopping therapist assignment. bookingAccepted:', bookingAccepted, 'acceptedBookingId:', acceptedBookingId, 'sessionBookingAccepted:', sessionBookingAccepted);
@@ -783,6 +801,7 @@ function sendRequestToCurrentTherapist() {
   
   console.log('Sending request to therapist index:', currentTherapistIndex);
   console.log('Available therapists length:', availableTherapists.length);
+  console.log('Available therapists:', availableTherapists);
   console.log('Booking accepted flag:', bookingAccepted);
   console.log('Is in fallback mode:', isInFallbackMode);
 
@@ -795,7 +814,8 @@ function sendRequestToCurrentTherapist() {
   }
 
   const currentTherapist = availableTherapists[currentTherapistIndex];
-  console.log('Current therapist:', currentTherapist);
+  console.log('Current therapist object:', currentTherapist);
+  console.log('Current therapist name:', currentTherapist.name);
 
   // Final check before sending email
   const finalAcceptedBookingId = localStorage.getItem('acceptedBookingId');
@@ -823,6 +843,8 @@ function sendRequestToCurrentTherapist() {
     document.getElementById('currentTherapist').textContent = `${currentTherapist.name} (${currentTherapist.distance.toFixed(1)} mi)`;
   }
 
+  console.log('About to send email to therapist:', currentTherapist.name);
+  
   // Send email to current therapist
   sendTherapistEmail(currentTherapist);
 
@@ -833,9 +855,18 @@ function sendRequestToCurrentTherapist() {
 
 // Send email to therapist
 function sendTherapistEmail(therapist) {
+  console.log('=== sendTherapistEmail called ===');
+  console.log('Therapist object received:', therapist);
+  console.log('Therapist name:', therapist.name);
+  
   // Check multiple conditions to prevent sending emails if already accepted
   const acceptedBookingId = localStorage.getItem('acceptedBookingId');
   const sessionBookingAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+  
+  console.log('Checking acceptance status in sendTherapistEmail:');
+  console.log('- bookingAccepted:', bookingAccepted);
+  console.log('- acceptedBookingId:', acceptedBookingId);
+  console.log('- sessionBookingAccepted:', sessionBookingAccepted);
   
   if (bookingAccepted || acceptedBookingId || sessionBookingAccepted) {
     console.log('Booking already accepted, not sending email to therapist:', therapist.name);
@@ -851,6 +882,13 @@ function sendTherapistEmail(therapist) {
   const customerPhone = document.getElementById('customerPhone').value;
   const address = document.getElementById('address').value;
 
+  console.log('Form data for therapist email:');
+  console.log('- Customer name:', customerName);
+  console.log('- Customer email:', customerEmail);
+  console.log('- Customer phone:', customerPhone);
+  console.log('- Address:', address);
+  console.log('- Price:', price);
+
   // Include booking ID in the URL to track acceptances
   const acceptUrl = `${window.location.origin}${window.location.pathname}?a=accept&t=${encodeURIComponent(therapist.name)}&bid=${bookingId}&b=${encodeURIComponent(JSON.stringify({
     n: customerName, e: customerEmail, p: customerPhone, a: address,
@@ -864,6 +902,10 @@ function sendTherapistEmail(therapist) {
     dt: document.getElementById('date').value, tm: document.getElementById('time').value,
     pk: document.getElementById('parking').value, pr: price, tn: therapist.name
   }))}`;
+
+  console.log('Generated URLs:');
+  console.log('- Accept URL:', acceptUrl);
+  console.log('- Decline URL:', declineUrl);
 
   // Determine if this is the selected therapist
   const isSelectedTherapist = therapist.name === selectedTherapistName;
@@ -911,26 +953,49 @@ function sendTherapistEmail(therapist) {
     </p>
   `;
 
-  emailjs.send('service_puww2kb','template_zh8jess', {
-    to_name: therapist.name,
-    to_email: 'aidanleo@yahoo.co.uk', // For testing
-    subject: `Therapist - ${therapist.name} You've got a New Booking Request`,
-    message: summaryText, // Plain text fallback
-    message_html: simpleEmailHTML, // Use hyperlinks in HTML
-    html_message: simpleEmailHTML, // Alternative HTML field
-    html_content: simpleEmailHTML, // Another HTML field name
-    customer_name: customerName,
-    customer_email: customerEmail,
-    customer_phone: customerPhone,
-    address_for_massage: address,
-    therapist_name: therapist.name,
-    accept_link: acceptUrl,
-    decline_link: declineUrl
-  }, 'V8qq2pjH8vfh3a6q3').then((response) => {
-    console.log('Email sent to therapist successfully:', therapist.name, response);
-  }).catch(err => {
-    console.error('Email failed for therapist:', therapist.name, err);
-  });
+  console.log('About to send EmailJS request...');
+  console.log('EmailJS available:', typeof emailjs !== 'undefined');
+  console.log('EmailJS init available:', typeof emailjs !== 'undefined' && emailjs.init);
+
+  if (typeof emailjs !== 'undefined' && emailjs.init) {
+    const emailSubject = `Therapist - ${therapist.name} You've got a New Booking Request`;
+    
+    console.log('Sending EmailJS request with parameters:');
+    console.log('- Service ID: service_puww2kb');
+    console.log('- Template ID: template_zh8jess');
+    console.log('- To name: ', therapist.name);
+    console.log('- To email: aidanleo@yahoo.co.uk');
+    console.log('- Subject: ', emailSubject);
+    
+    const emailParams = {
+      to_name: therapist.name,
+      to_email: 'aidanleo@yahoo.co.uk', // For testing
+      subject: emailSubject,
+      message: summaryText, // Plain text fallback
+      message_html: simpleEmailHTML, // Use hyperlinks in HTML
+      html_message: simpleEmailHTML, // Alternative HTML field
+      html_content: simpleEmailHTML, // Another HTML field name
+      customer_name: customerName,
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
+      address_for_massage: address,
+      therapist_name: therapist.name,
+      accept_link: acceptUrl,
+      decline_link: declineUrl
+    };
+    
+    console.log('Full EmailJS parameters:', emailParams);
+    
+    emailjs.send('service_puww2kb','template_zh8jess', emailParams, 'V8qq2pjH8vfh3a6q3').then((response) => {
+      console.log('Email sent to therapist successfully:', therapist.name, response);
+      console.log('EmailJS response details:', response);
+    }).catch(err => {
+      console.error('Email failed for therapist:', therapist.name, err);
+      console.error('EmailJS error details:', err);
+    });
+  } else {
+    console.error('EmailJS not available for therapist email');
+  }
 }
 
 // Send admin notification (placeholder for now)
