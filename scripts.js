@@ -64,6 +64,18 @@ function loadGoogleMapsAPIFallback() {
 function initEmailJS() {
   if (typeof emailjs !== 'undefined') {
     emailjs.init('V8qq2pjH8vfh3a6q3');
+    console.log('EmailJS initialized successfully');
+    
+    // Test EmailJS functionality
+    setTimeout(() => {
+      if (typeof emailjs !== 'undefined' && emailjs.init) {
+        console.log('EmailJS is ready for use');
+      } else {
+        console.error('EmailJS not properly initialized');
+      }
+    }, 1000);
+  } else {
+    console.error('EmailJS not loaded');
   }
 }
 
@@ -212,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         if (availableTherapists.length === 0) {
-          selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Unfortunately we\'re don\'t have any therapists available in your area right now.</p>';
+          selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">Unfortunately we don\'t have any therapists available in your area right now.</p>';
           const requestBtn = document.getElementById('requestBtn');
           if (requestBtn) {
             requestBtn.disabled = true;
@@ -337,6 +349,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const debugBtn = document.getElementById('debugBtn');
   if (debugBtn) {
     debugBtn.onclick = () => {
+      // Test the therapist assignment process
+      console.log('Testing therapist assignment...');
+      console.log('Available therapists:', availableTherapists);
+      console.log('Selected therapist:', selectedTherapistName);
+      
+      if (availableTherapists.length === 0) {
+        alert('No therapists available. Please complete the booking form first.');
+        return;
+      }
+      
+      // Simulate a booking
       const testBooking = {
         customerName: document.getElementById('customerName').value || 'Test Customer',
         customerEmail: document.getElementById('customerEmail').value || 'test@example.com',
@@ -348,25 +371,48 @@ document.addEventListener('DOMContentLoaded', function() {
         time: document.getElementById('time').value || '14:00',
         parking: document.getElementById('parking').value || 'free',
         price: calculatePrice() || '159.00',
-        therapistName: selectedTherapistName || 'Test Therapist'
+        therapistName: selectedTherapistName || availableTherapists[0].name
       };
       
-      const testBookingId = 'test_booking_' + Date.now();
-      const testBookingData = encodeURIComponent(JSON.stringify({
-        n: testBooking.customerName,
-        e: testBooking.customerEmail,
-        p: testBooking.customerPhone,
-        a: testBooking.address,
-        s: testBooking.service,
-        d: testBooking.duration,
-        dt: testBooking.date,
-        tm: testBooking.time,
-        pk: testBooking.parking,
-        pr: testBooking.price,
-        tn: testBooking.therapistName
-      }));
+      console.log('Test booking:', testBooking);
       
-      handleTherapistResponse('accept', testBooking.therapistName, testBookingData, testBookingId);
+      // Test sending email to therapist
+      if (availableTherapists.length > 0) {
+        sendTherapistEmail(availableTherapists[0]);
+        alert('Test email sent to therapist: ' + availableTherapists[0].name);
+      }
+    };
+  }
+  
+  // EmailJS test button handler
+  const testEmailBtn = document.getElementById('testEmailBtn');
+  if (testEmailBtn) {
+    testEmailBtn.onclick = () => {
+      console.log('Testing EmailJS...');
+      
+      if (typeof emailjs !== 'undefined' && emailjs.init) {
+        console.log('EmailJS is available');
+        
+        // Send a test email
+        emailjs.send('service_puww2kb','template_zh8jess', {
+          to_name: 'Test User',
+          to_email: 'aidanleo@yahoo.co.uk',
+          subject: 'Test Email from Booking System',
+          message: 'This is a test email to verify EmailJS is working properly.',
+          message_html: '<h2>Test Email</h2><p>This is a test email to verify EmailJS is working properly.</p>',
+          html_message: '<h2>Test Email</h2><p>This is a test email to verify EmailJS is working properly.</p>',
+          html_content: '<h2>Test Email</h2><p>This is a test email to verify EmailJS is working properly.</p>'
+        }, 'V8qq2pjH8vfh3a6q3').then((response) => {
+          console.log('Test email sent successfully:', response);
+          alert('Test email sent successfully! Check your email.');
+        }).catch(err => {
+          console.error('Test email failed:', err);
+          alert('Test email failed: ' + err.text);
+        });
+      } else {
+        console.error('EmailJS not available');
+        alert('EmailJS not available. Please check the console for details.');
+      }
     };
   }
 });
@@ -631,20 +677,17 @@ document.getElementById('payBtn').onclick=()=>{
         }
         // Store payment method ID for later use
         window.paymentMethodId = result.paymentMethod.id;
-        console.log('Payment method created:', result.paymentMethod.id);
         // Start therapist assignment process
         startTherapistAssignment();
       });
     } else {
       // Simulate successful payment method creation for testing
       window.paymentMethodId = 'pm_test_' + Math.random().toString(36).substr(2, 9);
-      console.log('Test payment method created:', window.paymentMethodId);
       startTherapistAssignment();
     }
   } else {
     // Stripe not loaded, simulate success
     window.paymentMethodId = 'pm_test_' + Math.random().toString(36).substr(2, 9);
-    console.log('Test payment method created:', window.paymentMethodId);
     startTherapistAssignment();
   }
 };
