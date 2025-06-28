@@ -512,6 +512,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
   }
 
+  // Cross-tab coordination using storage events
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'bookingAccepted' && e.newValue === 'true') {
+      console.log('📢 Detected bookingAccepted in another tab, stopping timer');
+      if (therapistTimeout) {
+        clearInterval(therapistTimeout);
+        therapistTimeout = null;
+        console.log('✅ Cleared therapistTimeout via storage event');
+      }
+
+      // Show confirmation in the original tab
+      const therapist = sessionStorage.getItem('acceptedTherapist');
+      const bookingData = sessionStorage.getItem('acceptedBookingData');
+      if (therapist && bookingData) {
+        const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
+        showConfirmationPage(parsedBookingData, therapist);
+      }
+    }
+  });
+
   // Simple URL parameter handler
   const urlParams = new URLSearchParams(window.location.search);
   const action = urlParams.get('action');
@@ -521,20 +541,24 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (action && therapistName && bookingData && receivedBookingId) {
     if (action === 'accept') {
-      // IMMEDIATELY stop everything and mark as accepted
+      // 1. Mark as accepted so startCountdown() picks it up
       sessionStorage.setItem('bookingAccepted', 'true');
       sessionStorage.setItem('acceptedTherapist', therapistName);
       sessionStorage.setItem('acceptedBookingData', bookingData);
-      
-      // Clear URL parameters
+
+      // 2. *Also* clear any running timeout in this context
+      if (therapistTimeout) {
+        clearInterval(therapistTimeout);
+        therapistTimeout = null;
+        console.log('✅ Cleared therapistTimeout via ACCEPT URL handler');
+      }
+
+      // 3. Cleanup the URL
       window.history.replaceState({}, document.title, window.location.pathname);
-      
+
+      // 4. Send confirmation & show page
       const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
-      
-      // Send confirmation email to customer
       sendCustomerConfirmationEmail(parsedBookingData, therapistName);
-      
-      // Show confirmation page
       showConfirmationPage(parsedBookingData, therapistName);
     } else if (action === 'decline') {
       // Move to next therapist
