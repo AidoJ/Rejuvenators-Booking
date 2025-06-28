@@ -331,26 +331,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Generate unique booking ID
     bookingId = 'booking_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
-    // Check if booking was already accepted in another tab
-    const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
-    if (alreadyAccepted) {
-      const acceptedTherapist = localStorage.getItem('acceptedTherapist');
-      const acceptedBookingData = localStorage.getItem('acceptedBookingData');
-      if (acceptedTherapist && acceptedBookingData) {
-        showConfirmationPage(JSON.parse(acceptedBookingData), acceptedTherapist);
-        return;
-      }
-    }
-    
     show('step8');
     bookingAccepted = false;
     currentTherapistIndex = 0;
-    
-    // Clear any previous acceptance data
-    localStorage.removeItem('bookingAccepted');
-    localStorage.removeItem('acceptedTherapist');
-    localStorage.removeItem('acceptedBookingData');
-    localStorage.removeItem('acceptedBookingId');
     
     // Send acknowledgment email to customer
     sendCustomerAcknowledgmentEmail();
@@ -360,9 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function sendRequestToCurrentTherapist() {
-    // Check if booking was already accepted
-    const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
-    if (alreadyAccepted || bookingAccepted || currentTherapistIndex >= availableTherapists.length) {
+    if (bookingAccepted || currentTherapistIndex >= availableTherapists.length) {
       if (currentTherapistIndex >= availableTherapists.length) {
         document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
       }
@@ -483,66 +464,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (therapistTimeout) clearInterval(therapistTimeout);
     
-    console.log('Starting countdown timer...');
-    
-    // Add a more frequent check for URL parameters
-    const urlCheckInterval = setInterval(() => {
-      const currentUrlParams = new URLSearchParams(window.location.search);
-      const currentAction = currentUrlParams.get('action');
-      const currentTherapistName = currentUrlParams.get('therapist');
-      const currentBookingData = currentUrlParams.get('booking');
-      const receivedBookingId = currentUrlParams.get('bookingId');
-      
-      if (currentAction && currentTherapistName && currentBookingData && receivedBookingId) {
-        console.log('URL parameters detected in frequent check!');
-        clearInterval(urlCheckInterval);
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
-        
-        // Clear the URL parameters
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Handle the response immediately
-        handleTherapistResponse(currentAction, currentTherapistName, JSON.parse(decodeURIComponent(currentBookingData)), receivedBookingId);
-        return;
-      }
-    }, 500); // Check every 500ms
-    
     therapistTimeout = setInterval(() => {
-      // Check if booking was already accepted
-      const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
-      console.log('Timer tick - alreadyAccepted:', alreadyAccepted, 'bookingAccepted:', bookingAccepted);
-      
-      if (bookingAccepted || alreadyAccepted) {
-        console.log('Stopping timer - booking already accepted');
+      if (bookingAccepted) {
         clearInterval(therapistTimeout);
-        clearInterval(urlCheckInterval);
         therapistTimeout = null;
-        return;
-      }
-      
-      // Check for URL parameters (Accept/Decline clicks)
-      const currentUrlParams = new URLSearchParams(window.location.search);
-      const currentAction = currentUrlParams.get('action');
-      const currentTherapistName = currentUrlParams.get('therapist');
-      const currentBookingData = currentUrlParams.get('booking');
-      const receivedBookingId = currentUrlParams.get('bookingId');
-      
-      console.log('URL params check:', {
-        action: currentAction,
-        therapist: currentTherapistName,
-        hasBookingData: !!currentBookingData,
-        bookingId: receivedBookingId
-      });
-      
-      if (currentAction && currentTherapistName && currentBookingData && receivedBookingId) {
-        console.log('URL parameters detected! Processing response...');
-        clearInterval(urlCheckInterval);
-        // Clear the URL parameters to prevent multiple processing
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Handle the response immediately
-        handleTherapistResponse(currentAction, currentTherapistName, JSON.parse(decodeURIComponent(currentBookingData)), receivedBookingId);
         return;
       }
       
@@ -550,17 +475,8 @@ document.addEventListener('DOMContentLoaded', function() {
       timerElement.textContent = `${timeRemaining} seconds`;
       
       if (timeRemaining <= 0) {
-        console.log('Timer expired, moving to next therapist');
         clearInterval(therapistTimeout);
-        clearInterval(urlCheckInterval);
         therapistTimeout = null;
-        
-        // Final check before moving to next therapist
-        const finalAccepted = localStorage.getItem('bookingAccepted') === 'true';
-        if (finalAccepted) {
-          console.log('Booking was accepted during countdown, stopping');
-          return;
-        }
         
         currentTherapistIndex++;
         
@@ -573,90 +489,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 1000);
   }
 
-  // Add window.onpopstate listener to catch URL changes
-  window.addEventListener('popstate', function(event) {
-    console.log('URL changed detected via popstate');
-    checkForUrlParameters();
-  });
-
-  // Add window.onhashchange listener as backup
-  window.addEventListener('hashchange', function(event) {
-    console.log('Hash change detected');
-    checkForUrlParameters();
-  });
-
-  // Handle therapist response from URL parameters
+  // Simple URL parameter handler
   const urlParams = new URLSearchParams(window.location.search);
   const action = urlParams.get('action');
   const therapistName = urlParams.get('therapist');
   const bookingData = urlParams.get('booking');
   const receivedBookingId = urlParams.get('bookingId');
   
-  console.log('Initial URL params check:', {
-    action: action,
-    therapist: therapistName,
-    hasBookingData: !!bookingData,
-    bookingId: receivedBookingId
-  });
-  
   if (action && therapistName && bookingData && receivedBookingId) {
-    console.log('Initial URL parameters found, handling response...');
-    setTimeout(() => {
-      handleTherapistResponse(action, therapistName, JSON.parse(decodeURIComponent(bookingData)), receivedBookingId);
-    }, 100);
-  }
-
-  function handleTherapistResponse(action, therapistName, bookingData, receivedBookingId) {
-    console.log('=== HANDLING THERAPIST RESPONSE ===');
-    console.log('Action:', action);
-    console.log('Therapist:', therapistName);
-    console.log('Booking ID:', receivedBookingId);
-    console.log('Current bookingAccepted:', bookingAccepted);
-    console.log('localStorage bookingAccepted:', localStorage.getItem('bookingAccepted'));
-    
     if (action === 'accept') {
-      // Check if ANY booking has already been accepted
-      const alreadyAccepted = localStorage.getItem('bookingAccepted') === 'true';
-      console.log('Already accepted check:', alreadyAccepted);
-      
-      if (alreadyAccepted) {
-        console.log('❌ Booking already accepted by another therapist');
-        showAlreadyAcceptedMessage();
-        return;
-      }
-      
-      console.log('✅ ACCEPTING BOOKING - stopping all processes');
-      
-      // IMMEDIATELY stop all processes
+      // IMMEDIATELY stop everything
       bookingAccepted = true;
       if (therapistTimeout) {
-        console.log('Clearing timer...');
         clearInterval(therapistTimeout);
         therapistTimeout = null;
       }
       
-      // Store acceptance in localStorage to prevent other tabs from continuing
-      localStorage.setItem('bookingAccepted', 'true');
-      localStorage.setItem('acceptedTherapist', therapistName);
-      localStorage.setItem('acceptedBookingData', JSON.stringify(bookingData));
-      localStorage.setItem('acceptedBookingId', receivedBookingId);
-      
-      console.log('✅ Booking accepted by:', therapistName);
-      console.log('localStorage updated:', {
-        bookingAccepted: localStorage.getItem('bookingAccepted'),
-        therapist: localStorage.getItem('acceptedTherapist'),
-        bookingId: localStorage.getItem('acceptedBookingId')
-      });
+      const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
       
       // Send confirmation email to customer
-      sendCustomerConfirmationEmail(bookingData, therapistName);
+      sendCustomerConfirmationEmail(parsedBookingData, therapistName);
       
       // Show confirmation page
-      showConfirmationPage(bookingData, therapistName);
+      showConfirmationPage(parsedBookingData, therapistName);
     } else if (action === 'decline') {
-      console.log('❌ Booking declined by:', therapistName);
-      
-      // Move to next therapist or show decline message
+      // Move to next therapist
       currentTherapistIndex++;
       if (currentTherapistIndex < availableTherapists.length) {
         sendRequestToCurrentTherapist();
@@ -726,20 +583,6 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
   }
 
-  function showAlreadyAcceptedMessage() {
-    document.documentElement.innerHTML = `
-      <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
-        <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-          <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
-          <h1 style="color: #f0ad4e; margin-bottom: 20px;">Booking Already Accepted</h1>
-          <p style="font-size: 18px; color: #666;">
-            This booking has already been accepted by another therapist.
-          </p>
-        </div>
-      </div>
-    `;
-  }
-
   // Load Google Maps API and try GPS
   loadGoogleMapsAPI();
   tryGeolocation();
@@ -748,46 +591,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initial price
   updatePriceDisplay();
-
-  // Add a manual check for URL parameters (for debugging)
-  function checkForUrlParameters() {
-    const currentUrlParams = new URLSearchParams(window.location.search);
-    const currentAction = currentUrlParams.get('action');
-    const currentTherapistName = currentUrlParams.get('therapist');
-    const currentBookingData = currentUrlParams.get('booking');
-    const receivedBookingId = currentUrlParams.get('bookingId');
-    
-    console.log('Manual URL check:', {
-      action: currentAction,
-      therapist: currentTherapistName,
-      hasBookingData: !!currentBookingData,
-      bookingId: receivedBookingId
-    });
-    
-    if (currentAction && currentTherapistName && currentBookingData && receivedBookingId) {
-      console.log('Manual check found URL parameters! Processing...');
-      // Clear the URL parameters to prevent multiple processing
-      window.history.replaceState({}, document.title, window.location.pathname);
-      
-      // Handle the response immediately
-      handleTherapistResponse(currentAction, currentTherapistName, JSON.parse(decodeURIComponent(currentBookingData)), receivedBookingId);
-      return true;
-    }
-    return false;
-  }
-
-  // Add a test button to manually check URL parameters (temporary for debugging)
-  function addDebugButton() {
-    const debugDiv = document.createElement('div');
-    debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999;';
-    debugDiv.innerHTML = `
-      <button onclick="checkForUrlParameters()" style="background: red; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer;">
-        Check URL Params
-      </button>
-    `;
-    document.body.appendChild(debugDiv);
-  }
-
-  // Call this when the page loads
-  addDebugButton();
 }); 
