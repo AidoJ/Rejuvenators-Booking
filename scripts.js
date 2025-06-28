@@ -107,18 +107,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const base = 159;
     const dur = parseInt(document.getElementById('duration').value);
     let price = base + ((dur - 60) / 15) * 15;
-    // Surcharges
+    
+    // Surcharges - only apply one: either weekend OR after-hours
     const dateValue = document.getElementById('date').value;
     const timeValue = document.getElementById('time').value;
+    
     if (dateValue && timeValue) {
       const dt = new Date(dateValue + 'T' + timeValue);
-      if ([0,6].includes(dt.getDay())) price *= 1.2; // Weekend
+      const isWeekend = [0,6].includes(dt.getDay()); // Sunday = 0, Saturday = 6
       const hr = dt.getHours();
-      if (hr >= 18 || hr < 9) price *= 1.2; // After hours
+      const isAfterHours = hr >= 18 || hr < 9; // 6pm-9am
+      
+      // Apply surcharge only if it's weekend OR after-hours (not both)
+      if (isWeekend || isAfterHours) {
+        price *= 1.2; // 20% surcharge
+      }
     }
+    
     // Parking
     const parking = document.getElementById('parking').value;
     if (parking !== 'free') price += 20;
+    
     return price.toFixed(2);
   }
 
@@ -253,14 +262,13 @@ document.addEventListener('DOMContentLoaded', function() {
       <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
       <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
       <p><strong>Room:</strong> ${document.getElementById('roomNumber').value || 'N/A'}</p>
-      <p><strong>Room Size:</strong> ${document.getElementById('roomSize').value}</p>
       <p><strong>Therapist:</strong> ${selectedTherapist ? selectedTherapist.name : 'TBD'}</p>
       <p><strong>Total Price: $${price}</strong></p>
     `;
 
     // Initialize Stripe
     if (typeof Stripe !== 'undefined') {
-      stripe = Stripe('pk_test_12345'); // Replace with your Stripe key
+      stripe = Stripe('pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'); // Replace with your Stripe test key
       const elements = stripe.elements();
       card = elements.create('card');
       document.getElementById('card-element').innerHTML = '';
@@ -357,7 +365,6 @@ document.addEventListener('DOMContentLoaded', function() {
       time: document.getElementById('time').value,
       parking: document.getElementById('parking').value,
       roomNumber: document.getElementById('roomNumber').value,
-      roomSize: document.getElementById('roomSize').value,
       price: calculatePrice()
     };
 
@@ -375,7 +382,6 @@ document.addEventListener('DOMContentLoaded', function() {
       <p><strong>Date:</strong> ${bookingData.date}</p>
       <p><strong>Time:</strong> ${bookingData.time}</p>
       <p><strong>Room:</strong> ${bookingData.roomNumber || 'N/A'}</p>
-      <p><strong>Room Size:</strong> ${bookingData.roomSize}</p>
       <p><strong>Price:</strong> $${bookingData.price}</p>
       <br>
       <p><strong>Please respond within 120 seconds:</strong></p>
