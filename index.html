@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Rejuvenators Booking v6</title>
+  <title>Rejuvenators Mobile Massage Booking</title>
   <link rel="stylesheet" href="styles.css"/>
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
@@ -22,6 +22,7 @@
         <div class="progress-step" data-step="4">4</div>
         <div class="progress-step" data-step="5">5</div>
         <div class="progress-step" data-step="6">6</div>
+        <div class="progress-step" data-step="7">7</div>
       </div>
     </div>
     
@@ -70,12 +71,18 @@
         <div class="form-group">
           <label for="service">Massage Type</label>
           <select id="service">
-            <option>Stressbuster</option>
-            <option>Sports</option>
-            <option>Deep Tissue</option>
-            <option>Remedial</option>
-            <option>Aromatherapy</option>
-            <option>Couples</option>
+            <option value="Stress Buster Massage">Stress Buster Massage</option>
+            <option value="Sports Massage">Sports Massage</option>
+            <option value="Deep Tissue Massage">Deep Tissue Massage</option>
+            <option value="Remedial Massage">Remedial Massage</option>
+            <option value="Absolute Aroma Massage">Absolute Aroma Massage</option>
+            <option value="Pregnancy Massage">Pregnancy Massage</option>
+            <option value="Relax and Unwind Massage">Relax and Unwind Massage</option>
+            <option value="Therapeutic Delight Massage">Therapeutic Delight Massage</option>
+            <option value="Fabulous Feet Massage">Fabulous Feet Massage</option>
+            <option value="Escapade Massage">Escapade Massage</option>
+            <option value="Ultimate Indulgence Massage">Ultimate Indulgence Massage</option>
+            <option value="Couples Massage">Couples Massage</option>
           </select>
         </div>
         <div class="form-group">
@@ -85,13 +92,6 @@
             <option value="75">75 min</option>
             <option value="90">90 min</option>
             <option value="120">120 min</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="parking">Parking</label>
-          <select id="parking">
-            <option value="free">Free Parking Available</option>
-            <option value="paid">Paid Parking Required</option>
           </select>
         </div>
         <div class="button-group">
@@ -139,6 +139,19 @@
             <option value="19:30">7:30 PM</option>
             <option value="20:00">8:00 PM</option>
             <option value="20:30">8:30 PM</option>
+            <option value="21:00">9:00 PM</option>
+            <option value="21:30">9:30 PM</option>
+            <option value="22:00">10:00 PM</option>
+            <option value="22:30">10:30 PM</option>
+            <option value="23:00">11:00 PM</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="parking">Parking</label>
+          <select id="parking">
+            <option value="free">Free Parking Available</option>
+            <option value="paid">Paid Parking Required</option>
+            <option value="unknown">Unknown</option>
           </select>
         </div>
         <div id="priceDisplay" class="price-display">
@@ -152,8 +165,39 @@
       </div>
     </div>
     
-    <!-- Step 5: Therapist Selection -->
+    <!-- Step 5: Room Details -->
     <div id="step5" class="step">
+      <div class="step-header">
+        <h2>🏠 Room Details</h2>
+        <p class="step-description">Tell us about the room where the massage will take place</p>
+      </div>
+      <div class="step-content">
+        <div class="form-group">
+          <label for="roomNumber">Room Number (if applicable)</label>
+          <input type="text" id="roomNumber" placeholder="e.g., Room 101, Apartment 2B" />
+        </div>
+        <div class="form-group">
+          <label for="bookerName">Name of Person Who Booked</label>
+          <input type="text" id="bookerName" placeholder="Full name of the person who made this booking" />
+        </div>
+        <div class="form-group">
+          <label for="roomSize">Room Size</label>
+          <select id="roomSize">
+            <option value="small">Small (enough for massage table)</option>
+            <option value="medium">Medium (comfortable space)</option>
+            <option value="large">Large (plenty of space)</option>
+            <option value="very-large">Very Large (spacious area)</option>
+          </select>
+        </div>
+        <div class="button-group">
+          <button class="btn prev" data-prev="step4">Back</button>
+          <button class="btn next" data-next="step6">Continue</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Step 6: Therapist Selection -->
+    <div id="step6" class="step">
       <div class="step-header">
         <h2>👨‍⚕️ Choose Your Therapist</h2>
         <p class="step-description">Select your preferred therapist from our available team</p>
@@ -161,14 +205,14 @@
       <div class="step-content">
         <div id="therapistSelection"></div>
         <div class="button-group">
-          <button class="btn prev" data-prev="step4">Back</button>
+          <button class="btn prev" data-prev="step5">Back</button>
           <button id="requestBtn" class="btn primary">Request Booking</button>
         </div>
       </div>
     </div>
     
-    <!-- Step 6: Payment -->
-    <div id="step6" class="step">
+    <!-- Step 7: Payment -->
+    <div id="step7" class="step">
       <div class="step-header">
         <h2>💳 Payment Details</h2>
         <p class="step-description">Your card will only be charged after a therapist accepts your booking</p>
@@ -177,14 +221,14 @@
         <div id="summary" class="booking-summary"></div>
         <div id="card-element" class="card-element"></div>
         <div class="button-group">
-          <button class="btn prev" data-prev="step5">Back</button>
+          <button class="btn prev" data-prev="step6">Back</button>
           <button id="payBtn" class="btn primary" disabled>Submit Booking Request</button>
         </div>
       </div>
     </div>
     
-    <!-- Step 7: Booking Request (Accept/Decline) -->
-    <div id="step7" class="step">
+    <!-- Step 8: Booking Request (Accept/Decline) -->
+    <div id="step8" class="step">
       <div class="step-header">
         <h2>⏳ Booking Request Sent</h2>
         <p class="step-description">We're contacting your therapist now...</p>
@@ -195,19 +239,6 @@
           <p><strong>Current Therapist:</strong> <span id="currentTherapist">Loading...</span></p>
           <p><strong>Time Remaining:</strong> <span id="timeRemaining">120 seconds</span></p>
         </div>
-        <button id="acceptBtn" class="btn" style="display: none;">Simulate Accept</button>
-        <button id="declineBtn" class="btn" style="display: none;">Simulate Decline</button>
-      </div>
-    </div>
-    
-    <!-- Step 8: Final Confirmation -->
-    <div id="step8" class="step">
-      <div class="step-header">
-        <h2>🎉 Thank You!</h2>
-        <p class="step-description">Your booking has been confirmed</p>
-      </div>
-      <div class="step-content">
-        <div id="finalMsg">Thank you!</div>
       </div>
     </div>
   </div>
