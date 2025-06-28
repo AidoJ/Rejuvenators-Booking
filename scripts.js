@@ -149,7 +149,24 @@ document.addEventListener('DOMContentLoaded', function() {
   let selectedTherapist = null;
   
   // When moving to step 6 (therapist selection), filter and display therapists
-  document.querySelector('.next[data-next="step6"]').onclick = function() {
+  // Use a MutationObserver to detect when step6 becomes active instead of overriding the button
+  const step6Observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        const step6 = document.getElementById('step6');
+        if (step6 && step6.classList.contains('active')) {
+          loadTherapistSelection();
+        }
+      }
+    });
+  });
+  
+  step6Observer.observe(document.getElementById('step6'), {
+    attributes: true,
+    attributeFilter: ['class']
+  });
+
+  function loadTherapistSelection() {
     availableTherapists = filterTherapists();
     const selDiv = document.getElementById('therapistSelection');
     
@@ -180,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedTherapist = JSON.parse(this.value);
       };
     }
-  };
+  }
 
   // --- Payment Integration ---
   let stripe, card;
