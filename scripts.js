@@ -328,6 +328,8 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   function startBookingRequest() {
+    if (bookingAccepted) return;    // <— prevent a second kick-off
+    
     // Generate unique booking ID
     bookingId = 'booking_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
@@ -470,6 +472,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) clearInterval(therapistTimeout);
     
     therapistTimeout = setInterval(() => {
+      if (bookingAccepted) {        // bail out immediately
+        clearInterval(therapistTimeout);
+        therapistTimeout = null;
+        console.log('⏹️ Countdown cleared because bookingAccepted');
+        return;
+      }
+      
       // Check if booking was accepted (persists across page reloads)
       const wasAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
       const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
@@ -487,12 +496,6 @@ document.addEventListener('DOMContentLoaded', function() {
           const parsedBookingData = JSON.parse(decodeURIComponent(acceptedBookingData));
           showConfirmationPage(parsedBookingData, acceptedTherapist);
         }
-        return;
-      }
-      
-      if (bookingAccepted) {
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
         return;
       }
       
@@ -587,11 +590,12 @@ document.addEventListener('DOMContentLoaded', function() {
       sessionStorage.setItem('acceptedBookingData', bookingData);
       sessionStorage.setItem('acceptedBookingId', receivedBookingId);
 
-      // 2. *Also* clear any running timeout in this context
+      // STOP THE TIMER & FLAG IT
+      bookingAccepted = true;
       if (therapistTimeout) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
-        console.log('✅ Cleared therapistTimeout via ACCEPT URL handler');
+        console.log('⏹️ Timer stopped on accept');
       }
 
       // 3. Cleanup the URL
