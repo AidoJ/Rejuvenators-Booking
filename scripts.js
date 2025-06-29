@@ -74,17 +74,32 @@ document.addEventListener('DOMContentLoaded', () => {
   loadMockTherapists();
 
   // ----- Address Autocomplete -----
+  function loadGoogleMapsAPI() {
+    const apiKey = 'AIzaSyBo632bfwdyKtue_-wkAms0Ac2mMRVnTWg';
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initAutocomplete`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+  
   function initAutocomplete() {
-    if (!window.google) return;
+    if (!window.google || !google.maps || !google.maps.places) return;
     const inp = document.getElementById('address');
-    const auto = new google.maps.places.Autocomplete(inp, { componentRestrictions: {country:'au'} });
-    auto.addListener('place_changed', () => {
-      const p = auto.getPlace();
-      if (p.geometry) {
-        currentLat = p.geometry.location.lat();
-        currentLon = p.geometry.location.lng();
-      }
-    });
+    if (!inp) return;
+    
+    try {
+      const auto = new google.maps.places.Autocomplete(inp, { componentRestrictions: {country:'au'} });
+      auto.addListener('place_changed', () => {
+        const p = auto.getPlace();
+        if (p.geometry && p.geometry.location) {
+          currentLat = p.geometry.location.lat();
+          currentLon = p.geometry.location.lng();
+        }
+      });
+    } catch (e) {
+      console.error('Autocomplete error:', e);
+    }
   }
   window.initAutocomplete = initAutocomplete;
 
@@ -184,5 +199,5 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ----- Init -----
-  initAutocomplete();
+  loadGoogleMapsAPI();
 });
