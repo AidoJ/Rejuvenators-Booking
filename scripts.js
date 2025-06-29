@@ -1,687 +1,188 @@
 // Rejuvenators Booking System v7 - Full Implementation (Block 1)
 
-document.addEventListener('DOMContentLoaded', function() {
-  // Step navigation
+document.addEventListener('DOMContentLoaded', () => {
+  // ----- State & Variables -----
   let currentStep = 'step1';
+  let therapists = [];
+  let availableTherapists = [];
+  let currentLat = null;
+  let currentLon = null;
+  let selectedTherapist = null;
+
+  // ----- Navigation & Progress -----
   function show(step) {
     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
     document.getElementById(step).classList.add('active');
     currentStep = step;
-    updateProgressBar(step);
+    updateProgress(step);
   }
-
-  // Progress bar update
-  function updateProgressBar(step) {
-    const progressSteps = document.querySelectorAll('.progress-step');
-    const stepNumber = parseInt(step.replace('step', ''));
-    progressSteps.forEach((stepElement, index) => {
-      const stepNum = index + 1;
-      stepElement.classList.remove('active', 'completed');
-      if (stepNum < stepNumber) {
-        stepElement.classList.add('completed');
-      } else if (stepNum === stepNumber) {
-        stepElement.classList.add('active');
-      }
+  function updateProgress(step) {
+    const idx = parseInt(step.replace('step', ''), 10);
+    document.querySelectorAll('.progress-step').forEach((el, i) => {
+      el.classList.toggle('completed', i < idx - 1);
+      el.classList.toggle('active', i === idx - 1);
     });
   }
+  document.querySelectorAll('.next').forEach(btn => btn.onclick = () => show(btn.dataset.next));
+  document.querySelectorAll('.prev').forEach(btn => btn.onclick = () => show(btn.dataset.prev));
+  updateProgress('step1');
 
-  // Next/Prev button handlers
-  document.querySelectorAll('.next').forEach(b => b.onclick = () => show(b.dataset.next));
-  document.querySelectorAll('.prev').forEach(b => b.onclick = () => show(b.dataset.prev));
-
-  // Initialize progress bar
-  updateProgressBar('step1');
-
-  // --- Location & Therapist Filtering ---
-  let currentLat = null, currentLon = null, therapists = [], availableTherapists = [];
-
-  // Load therapists from mock API
-  function loadTherapists(callback) {
-    fetch('mock-api/therapists.json')
-      .then(r => r.json())
-      .then(data => {
-        therapists = data;
-        if (callback) callback();
-      });
-  }
-
-  // Google Maps Autocomplete
-  function loadGoogleMapsAPI() {
-    const apiKey = 'AIzaSyBo632bfwdyKtue_-wkAms0Ac2mMRVnTWg'; // Replace with secure method in prod
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initAutocomplete`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }
-
-  window.initAutocomplete = function() {
-    const addressInput = document.getElementById('address');
-    if (!addressInput) return;
-    if (typeof google === 'undefined' || !google.maps || !google.maps.places) return;
-    try {
-      const autocomplete = new google.maps.places.Autocomplete(addressInput, { componentRestrictions: { country: 'au' } });
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (place.geometry && place.geometry.location) {
-          currentLat = place.geometry.location.lat();
-          currentLon = place.geometry.location.lng();
-        }
-      });
-    } catch (e) { console.error('Autocomplete error', e); }
-  };
-
-  // Try to get GPS location
-  function tryGeolocation() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function(pos) {
-        currentLat = pos.coords.latitude;
-        currentLon = pos.coords.longitude;
-      });
-    }
-  }
-
-  // Haversine distance
-  function distance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  }
-
-  // Filter therapists by location and availability
-  function filterTherapists() {
-    if (currentLat === null || currentLon === null) return [];
-    return therapists.filter(t => {
-      const d = distance(currentLat, currentLon, t.lat, t.lon);
-      return d <= 20 && t.available;
-    });
-  }
-
-  // --- Service & Duration Selection ---
+  // ----- Price Calculation -----
   function calculatePrice() {
     const base = 159;
-    const dur = parseInt(document.getElementById('duration').value);
-    let price = base + ((dur - 60) / 15) * 15;
-    
-    // Surcharges - only apply one: either weekend OR after-hours
-    const dateValue = document.getElementById('date').value;
-    const timeValue = document.getElementById('time').value;
-    
-    if (dateValue && timeValue) {
-      const dt = new Date(dateValue + 'T' + timeValue);
-      const isWeekend = [0,6].includes(dt.getDay()); // Sunday = 0, Saturday = 6
-      const hr = dt.getHours();
-      const isAfterHours = hr >= 18 || hr < 9; // 6pm-9am
-      
-      // Apply surcharge only if it's weekend OR after-hours (not both)
-      if (isWeekend || isAfterHours) {
-        price *= 1.2; // 20% surcharge
-      }
+    const dur = parseInt(document.getElementById('duration').value, 10);
+    let price = base + ((dur - 60) / 15) * 35;
+    const dateVal = document.getElementById('date').value;
+    const timeVal = document.getElementById('time').value;
+    if (dateVal && timeVal) {
+      const dt = new Date(`${dateVal}T${timeVal}`);
+      const weekend = [0, 6].includes(dt.getDay());
+      const hour = dt.getHours();
+      const afterHours = hour < 9 || hour >= 21;
+      if (weekend) price *= 1.2;
+      if (hour >= 16 && hour < 21) price *= 1.2;
+      if (afterHours) price *= 1.3;
     }
-    
-    // Parking
-    const parking = document.getElementById('parking').value;
-    if (parking !== 'free') price += 20;
-    
+    if (document.getElementById('parking').value !== 'free') price += 20;
     return price.toFixed(2);
   }
-
   function updatePriceDisplay() {
-    const priceElement = document.getElementById('priceAmount');
-    if (priceElement) priceElement.textContent = calculatePrice();
+    const el = document.getElementById('priceAmount');
+    if (el) el.textContent = calculatePrice();
   }
-
-  // Event listeners for price update
   ['duration','date','time','parking'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', updatePriceDisplay);
+    const e = document.getElementById(id);
+    if (e) e.addEventListener('change', updatePriceDisplay);
   });
+  updatePriceDisplay();
 
-  // Address input fallback for manual entry
-  const addressInput = document.getElementById('address');
-  if (addressInput) {
-    addressInput.addEventListener('input', function() {
-      if (this.value.length > 10 && (!currentLat || !currentLon)) {
-        // Default to Brisbane CBD if not set
-        currentLat = -27.4698;
-        currentLon = 153.0251;
+  // ----- Geolocation & Mock Load -----
+  function tryGeo() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(p => {
+        currentLat = p.coords.latitude;
+        currentLon = p.coords.longitude;
+      });
+    }
+  }
+  function loadMockTherapists() {
+    fetch('mock-api/therapists.json')
+      .then(r => r.json())
+      .then(data => therapists = data);
+  }
+  tryGeo();
+  loadMockTherapists();
+
+  // ----- Address Autocomplete -----
+  function initAutocomplete() {
+    if (!window.google) return;
+    const inp = document.getElementById('address');
+    const auto = new google.maps.places.Autocomplete(inp, { componentRestrictions: {country:'au'} });
+    auto.addListener('place_changed', () => {
+      const p = auto.getPlace();
+      if (p.geometry) {
+        currentLat = p.geometry.location.lat();
+        currentLon = p.geometry.location.lng();
       }
     });
   }
+  window.initAutocomplete = initAutocomplete;
 
-  // --- Therapist Selection ---
-  let selectedTherapist = null;
-  
-  // When moving to step 6 (therapist selection), filter and display therapists
-  // Use a MutationObserver to detect when step6 becomes active instead of overriding the button
-  const step6Observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        const step6 = document.getElementById('step6');
-        if (step6 && step6.classList.contains('active')) {
-          loadTherapistSelection();
-        }
-      }
+  // ----- Therapist Filtering & Selection -----
+  function haversine(lat1,lon1,lat2,lon2) {
+    const R = 6371;
+    const dLat = (lat2-lat1)*Math.PI/180;
+    const dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  }
+  function filterTherapists() {
+    if (currentLat==null||currentLon==null) return [];
+    return therapists.filter(t=>{
+      const d=haversine(currentLat,currentLon,t.lat,t.lon);
+      return d<=10 && t.available;
     });
-  });
-  
-  step6Observer.observe(document.getElementById('step6'), {
-    attributes: true,
-    attributeFilter: ['class']
-  });
-
-  function loadTherapistSelection() {
+  }
+  document.querySelector('.next[data-next="step4"]').onclick = () => {
     availableTherapists = filterTherapists();
     const selDiv = document.getElementById('therapistSelection');
-    
-    if (availableTherapists.length === 0) {
-      selDiv.innerHTML = '<p style="color: red; text-align: center; padding: 20px;">No therapists available in your area. Please try a different location.</p>';
+    if (!availableTherapists.length) {
+      selDiv.innerHTML = '<p>No therapists nearby.</p>';
       document.getElementById('requestBtn').disabled = true;
     } else {
-      // Sort by distance
-      availableTherapists.sort((a, b) => {
-        const dA = distance(currentLat, currentLon, a.lat, a.lon);
-        const dB = distance(currentLat, currentLon, b.lat, b.lon);
-        return dA - dB;
-      });
-      
-      selDiv.innerHTML = '<select id="therapistSelect"></select>';
-      const sel = document.getElementById('therapistSelect');
-      availableTherapists.forEach(t => {
-        const d = distance(currentLat, currentLon, t.lat, t.lon);
+      const sel = document.createElement('select'); sel.id='therapistSelect';
+      availableTherapists.forEach(t=>{
         const opt = document.createElement('option');
+        const d = haversine(currentLat,currentLon,t.lat,t.lon).toFixed(1);
         opt.value = JSON.stringify(t);
-        opt.text = `${t.name} (${d.toFixed(1)} km away)`;
-        sel.append(opt);
+        opt.textContent = `${t.name} (${d} km)`;
+        sel.appendChild(opt);
       });
-      
-      // Set default selection
-      selectedTherapist = availableTherapists[0];
-      sel.onchange = function() {
-        selectedTherapist = JSON.parse(this.value);
-      };
-      
-      // Enable the request button
+      sel.onchange = ()=>{ selectedTherapist = JSON.parse(sel.value); };
+      selDiv.innerHTML=''; selDiv.appendChild(sel);
+      selectedTherapist = JSON.parse(sel.value);
       document.getElementById('requestBtn').disabled = false;
     }
-  }
-
-  // Request Booking button handler
-  document.getElementById('requestBtn').onclick = function() {
-    // Ensure we have the selected therapist
-    const therapistSelect = document.getElementById('therapistSelect');
-    if (therapistSelect) {
-      selectedTherapist = JSON.parse(therapistSelect.value);
-    }
-    
-    if (selectedTherapist) {
-      // Reorder availableTherapists to put the selected therapist first
-      const otherTherapists = availableTherapists.filter(t => t.name !== selectedTherapist.name);
-      availableTherapists = [selectedTherapist, ...otherTherapists];
-      
-      // Navigate to payment step
-      show('step7');
-    } else {
-      alert('Please select a therapist first.');
-    }
+    show('step4');
   };
 
-  // --- Payment Integration ---
+  // ----- Booking Request Flow -----
+  document.getElementById('requestBtn').onclick = () => {
+    if (!selectedTherapist) return alert('Select a therapist');
+    // compute price
+    const price = calculatePrice();
+    // email therapist
+    emailjs.init('YOUR_EMAILJS_PUBLIC_KEY');
+    emailjs.send('YOUR_SERVICE_ID','YOUR_TEMPLATE_ID',{
+      to_name: selectedTherapist.name,
+      to_email: 'aishizhenjing@gmail.com',
+      message: `New booking for ${document.getElementById('service').value}, total $${price}`
+    }).then(()=>console.log('Email sent')).catch(console.error);
+    show('step5');
+  };
+
+  // ----- Simulate Accept/Decline -----
+  document.getElementById('acceptBtn').onclick = () => {
+    // go to payment, show price
+    const price = calculatePrice();
+    document.getElementById('summary').innerHTML = `<p><strong>Total: $${price}</strong></p>`;
+    show('step6');
+  };
+  document.getElementById('declineBtn').onclick = () => {
+    document.getElementById('finalMsg').textContent = 'Booking Declined';
+    show('step7');
+  };
+
+  // ----- Payment -----
   let stripe, card;
-  
-  // Initialize Stripe when step 7 (payment) is shown
-  const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        const step7 = document.getElementById('step7');
-        if (step7 && step7.classList.contains('active')) {
-          initializePayment();
+  const payObserver = new MutationObserver(muts=>{
+    muts.forEach(m=>{
+      if (m.attributeName==='class' && m.target.classList.contains('active')) {
+        if (m.target.id==='step6') {
+          stripe = Stripe('pk_test_12345');
+          const elems = stripe.elements();
+          card = elems.create('card');
+          document.getElementById('card-element').innerHTML='';
+          card.mount('#card-element');
+          document.getElementById('payBtn').disabled = true;
+          card.on('change', e=>{
+            const btn = document.getElementById('payBtn');
+            btn.disabled = !e.complete; btn.style.opacity=e.complete?'1':'0.5';
+          });
         }
       }
     });
   });
-  
-  observer.observe(document.getElementById('step7'), {
-    attributes: true,
-    attributeFilter: ['class']
-  });
+  payObserver.observe(document.getElementById('step6'), { attributes:true });
 
-  function initializePayment() {
-    // Update booking summary
-    const summary = document.getElementById('summary');
-    const price = calculatePrice();
-    summary.innerHTML = `
-      <h3>Booking Summary</h3>
-      <p><strong>Customer:</strong> ${document.getElementById('customerName').value}</p>
-      <p><strong>Email:</strong> ${document.getElementById('customerEmail').value}</p>
-      <p><strong>Phone:</strong> ${document.getElementById('customerPhone').value}</p>
-      <p><strong>Address:</strong> ${document.getElementById('address').value}</p>
-      <p><strong>Service:</strong> ${document.getElementById('service').value}</p>
-      <p><strong>Duration:</strong> ${document.getElementById('duration').value} min</p>
-      <p><strong>Date:</strong> ${document.getElementById('date').value}</p>
-      <p><strong>Time:</strong> ${document.getElementById('time').value}</p>
-      <p><strong>Room:</strong> ${document.getElementById('roomNumber').value || 'N/A'}</p>
-      <p><strong>Therapist:</strong> ${selectedTherapist ? selectedTherapist.name : 'TBD'}</p>
-      <p><strong>Total Price: $${price}</strong></p>
-    `;
-
-    // Initialize Stripe
-    if (typeof Stripe !== 'undefined') {
-      stripe = Stripe('pk_test_51PGxKUKn3GaB6FyY1qeTOeYxWnBMDax8bUZhdP7RggDi1OyUp4BbSJWPhgb7hcvDynNqakuSfpGzwfuVhOsTvXmb001lwoCn7a');
-      const elements = stripe.elements();
-      card = elements.create('card');
-      document.getElementById('card-element').innerHTML = '';
-      card.mount('#card-element');
-      
-      card.on('change', function(event) {
-        const payBtn = document.getElementById('payBtn');
-        if (event.complete) {
-          payBtn.disabled = false;
-          payBtn.style.opacity = '1';
-        } else {
-          payBtn.disabled = true;
-          payBtn.style.opacity = '0.5';
-        }
-      });
-    }
-  }
-
-  // --- Booking Request & Notification System ---
-  let bookingAccepted = false;
-  let currentTherapistIndex = 0;
-  let therapistTimeout = null;
-  let timeRemaining = 120; // 2 minutes per therapist
-  let bookingId = null; // Unique booking ID
-
-  // Initialize EmailJS
-  function initEmailJS() {
-    if (typeof emailjs !== 'undefined') {
-      emailjs.init('V8qq2pjH8vfh3a6q3'); // Your EmailJS public key
-    }
-  }
-
-  // Payment button handler
-  document.getElementById('payBtn').onclick = function() {
-    if (typeof Stripe !== 'undefined' && stripe && card) {
-      stripe.createPaymentMethod({
-        type: 'card',
-        card: card,
-      }).then(result => {
-        if (result.error) {
-          alert(result.error.message);
-          return;
-        }
-        // Store payment method ID for later use
-        window.paymentMethodId = result.paymentMethod.id;
-        startBookingRequest();
-      });
-    } else {
-      // Fallback for testing
-      window.paymentMethodId = 'pm_test_' + Math.random().toString(36).substr(2, 9);
-      startBookingRequest();
-    }
+  document.getElementById('payBtn').onclick = () => {
+    stripe.createToken(card).then(res=>{
+      if (res.error) return alert(res.error.message);
+      document.getElementById('finalMsg').textContent = 'Payment Successful! Booking Confirmed';
+      show('step7');
+    });
   };
 
-  function startBookingRequest() {
-    if (bookingAccepted) return;    // <— prevent a second kick-off
-    
-    // Generate unique booking ID
-    bookingId = 'booking_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    // Clear any previous acceptance data
-    sessionStorage.removeItem('bookingAccepted');
-    sessionStorage.removeItem('acceptedTherapist');
-    sessionStorage.removeItem('acceptedBookingData');
-    
-    show('step8');
-    bookingAccepted = false;
-    currentTherapistIndex = 0;
-    
-    // Send acknowledgment email to customer
-    sendCustomerAcknowledgmentEmail();
-    
-    // Start therapist assignment process
-    sendRequestToCurrentTherapist();
-  }
-
-  function sendRequestToCurrentTherapist() {
-    if (bookingAccepted || currentTherapistIndex >= availableTherapists.length) {
-      if (currentTherapistIndex >= availableTherapists.length) {
-        document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
-      }
-      return;
-    }
-
-    const therapist = availableTherapists[currentTherapistIndex];
-    
-    // Update UI based on whether this is the selected therapist or a fallback
-    if (currentTherapistIndex === 0) {
-      document.getElementById('requestMsg').innerText = `Sending request to ${therapist.name} (your selected therapist)...`;
-    } else {
-      document.getElementById('requestMsg').innerText = `${selectedTherapist.name} did not respond. Now trying ${therapist.name}...`;
-    }
-    
-    document.getElementById('currentTherapist').textContent = therapist.name;
-    
-    // Send email to therapist
-    sendTherapistEmail(therapist);
-    
-    // Start countdown
-    startCountdown();
-  }
-
-  function sendTherapistEmail(therapist) {
-    const bookingData = {
-      customerName: document.getElementById('customerName').value,
-      customerEmail: document.getElementById('customerEmail').value,
-      customerPhone: document.getElementById('customerPhone').value,
-      address: document.getElementById('address').value,
-      service: document.getElementById('service').value,
-      duration: document.getElementById('duration').value,
-      date: document.getElementById('date').value,
-      time: document.getElementById('time').value,
-      parking: document.getElementById('parking').value,
-      roomNumber: document.getElementById('roomNumber').value,
-      price: calculatePrice()
-    };
-
-    const acceptUrl = `${window.location.origin}${window.location.pathname}?action=accept&therapist=${encodeURIComponent(therapist.name)}&booking=${encodeURIComponent(JSON.stringify(bookingData))}&bookingId=${bookingId}`;
-    const declineUrl = `${window.location.origin}${window.location.pathname}?action=decline&therapist=${encodeURIComponent(therapist.name)}&booking=${encodeURIComponent(JSON.stringify(bookingData))}&bookingId=${bookingId}`;
-
-    const emailHTML = `
-      <h2>NEW BOOKING REQUEST</h2>
-      <p><strong>Customer:</strong> ${bookingData.customerName}</p>
-      <p><strong>Email:</strong> ${bookingData.customerEmail}</p>
-      <p><strong>Phone:</strong> ${bookingData.customerPhone}</p>
-      <p><strong>Address:</strong> ${bookingData.address}</p>
-      <p><strong>Service:</strong> ${bookingData.service}</p>
-      <p><strong>Duration:</strong> ${bookingData.duration} min</p>
-      <p><strong>Date:</strong> ${bookingData.date}</p>
-      <p><strong>Time:</strong> ${bookingData.time}</p>
-      <p><strong>Room:</strong> ${bookingData.roomNumber || 'N/A'}</p>
-      <p><strong>Price:</strong> $${bookingData.price}</p>
-      <br>
-      <p><strong>Please respond within 120 seconds:</strong></p>
-      <p>
-        <a href="${acceptUrl}" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">ACCEPT</a>
-        <a href="${declineUrl}" style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">DECLINE</a>
-      </p>
-    `;
-
-    if (typeof emailjs !== 'undefined') {
-      emailjs.send('service_puww2kb', 'template_zh8jess', {
-        to_name: therapist.name,
-        to_email: 'aidanleo@yahoo.co.uk', // Replace with therapist.email in production
-        subject: `Therapist - ${therapist.name} You've got a New Booking Request`,
-        message_html: emailHTML,
-        html_message: emailHTML,
-        html_content: emailHTML
-      }, 'V8qq2pjH8vfh3a6q3').then(res => {
-        console.log('Therapist email sent:', res);
-      }).catch(err => {
-        console.error('Therapist email error:', err);
-      });
-    }
-  }
-
-  function sendCustomerAcknowledgmentEmail() {
-    const bookingData = {
-      customerName: document.getElementById('customerName').value,
-      customerEmail: document.getElementById('customerEmail').value,
-      service: document.getElementById('service').value,
-      duration: document.getElementById('duration').value,
-      date: document.getElementById('date').value,
-      time: document.getElementById('time').value,
-      price: calculatePrice()
-    };
-
-    const emailHTML = `
-      <h2>Booking Request Received</h2>
-      <p>Hi ${bookingData.customerName},</p>
-      <p>We've received your booking request for ${bookingData.service} on ${bookingData.date} at ${bookingData.time}.</p>
-      <p>We're now contacting available therapists in your area. You'll receive a confirmation email once a therapist accepts your booking.</p>
-      <p><strong>Total Price:</strong> $${bookingData.price}</p>
-      <p>Your payment will only be processed once a therapist accepts your booking.</p>
-    `;
-
-    if (typeof emailjs !== 'undefined') {
-      emailjs.send('service_puww2kb', 'template_zh8jess', {
-        to_name: bookingData.customerName,
-        to_email: bookingData.customerEmail,
-        subject: 'Booking Request Received',
-        message_html: emailHTML,
-        html_message: emailHTML,
-        html_content: emailHTML
-      }, 'V8qq2pjH8vfh3a6q3').then(res => {
-        console.log('Customer acknowledgment email sent:', res);
-      }).catch(err => {
-        console.error('Customer email error:', err);
-      });
-    }
-  }
-
-  function startCountdown() {
-    timeRemaining = 120;
-    const timerElement = document.getElementById('timeRemaining');
-    
-    if (therapistTimeout) clearInterval(therapistTimeout);
-    
-    therapistTimeout = setInterval(() => {
-      if (bookingAccepted) {        // bail out immediately
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
-        console.log('⏹️ Countdown cleared because bookingAccepted');
-        return;
-      }
-      
-      // Check if booking was accepted (persists across page reloads)
-      const wasAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
-      const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
-      
-      if (wasAccepted && acceptedBookingId === bookingId) {
-        console.log('Booking was accepted - stopping timer');
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
-        
-        // Get the accepted data and show confirmation
-        const acceptedTherapist = sessionStorage.getItem('acceptedTherapist');
-        const acceptedBookingData = sessionStorage.getItem('acceptedBookingData');
-        
-        if (acceptedTherapist && acceptedBookingData) {
-          const parsedBookingData = JSON.parse(decodeURIComponent(acceptedBookingData));
-          showConfirmationPage(parsedBookingData, acceptedTherapist);
-        }
-        return;
-      }
-      
-      timeRemaining--;
-      timerElement.textContent = `${timeRemaining} seconds`;
-      
-      if (timeRemaining <= 0) {
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
-        
-        // Check again if booking was accepted before showing timeout message
-        const finalCheckAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
-        const finalCheckBookingId = sessionStorage.getItem('acceptedBookingId');
-        
-        if (finalCheckAccepted && finalCheckBookingId === bookingId) {
-          // Booking was accepted, show confirmation instead of timeout
-          const acceptedTherapist = sessionStorage.getItem('acceptedTherapist');
-          const acceptedBookingData = sessionStorage.getItem('acceptedBookingData');
-          if (acceptedTherapist && acceptedBookingData) {
-            const parsedBookingData = JSON.parse(decodeURIComponent(acceptedBookingData));
-            showConfirmationPage(parsedBookingData, acceptedTherapist);
-          }
-          return;
-        }
-        
-        currentTherapistIndex++;
-        
-        if (currentTherapistIndex < availableTherapists.length) {
-          sendRequestToCurrentTherapist();
-        } else {
-          document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
-        }
-      }
-    }, 1000);
-  }
-
-  // Cross-tab coordination using storage events
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'bookingAccepted' && e.newValue === 'true') {
-      console.log('📢 Detected bookingAccepted in another tab, stopping timer');
-      if (therapistTimeout) {
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
-        console.log('✅ Cleared therapistTimeout via storage event');
-      }
-
-      // Show confirmation in the original tab
-      const therapist = sessionStorage.getItem('acceptedTherapist');
-      const bookingData = sessionStorage.getItem('acceptedBookingData');
-      if (therapist && bookingData) {
-        const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
-        showConfirmationPage(parsedBookingData, therapist);
-      }
-    }
-  });
-
-  // Simple URL parameter handler
-  const urlParams = new URLSearchParams(window.location.search);
-  const action = urlParams.get('action');
-  const therapistName = urlParams.get('therapist');
-  const bookingData = urlParams.get('booking');
-  const receivedBookingId = urlParams.get('bookingId');
-  
-  if (action && therapistName && bookingData && receivedBookingId) {
-    if (action === 'accept') {
-      // Check if this booking was already accepted by another therapist
-      const alreadyAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
-      const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
-      
-      if (alreadyAccepted && acceptedBookingId !== receivedBookingId) {
-        // Show "Already booked" message
-        document.documentElement.innerHTML = `
-          <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-              <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
-              <h1 style="color: #ffc107; margin-bottom: 20px;">Booking Already Accepted</h1>
-              <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
-                This booking has already been accepted by another therapist.
-              </p>
-              <p style="color: #666; font-size: 14px; margin-top: 30px;">
-                Thank you for your interest!
-              </p>
-            </div>
-          </div>
-        `;
-        return;
-      }
-      
-      // 1. Mark as accepted with booking ID
-      sessionStorage.setItem('bookingAccepted', 'true');
-      sessionStorage.setItem('acceptedTherapist', therapistName);
-      sessionStorage.setItem('acceptedBookingData', bookingData);
-      sessionStorage.setItem('acceptedBookingId', receivedBookingId);
-
-      // STOP THE TIMER & FLAG IT
-      bookingAccepted = true;
-      if (therapistTimeout) {
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
-        console.log('⏹️ Timer stopped on accept');
-      }
-
-      // 3. Cleanup the URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-
-      // 4. Send confirmation & show page
-      const parsedBookingData = JSON.parse(decodeURIComponent(bookingData));
-      sendCustomerConfirmationEmail(parsedBookingData, therapistName);
-      showConfirmationPage(parsedBookingData, therapistName);
-    } else if (action === 'decline') {
-      // Move to next therapist
-      currentTherapistIndex++;
-      if (currentTherapistIndex < availableTherapists.length) {
-        sendRequestToCurrentTherapist();
-      } else {
-        document.getElementById('requestMsg').innerText = 'All therapists declined. Your payment will be refunded.';
-      }
-    }
-  }
-
-  function sendCustomerConfirmationEmail(bookingData, therapistName) {
-    const emailHTML = `
-      <h2>Booking Confirmed!</h2>
-      <p>Hi ${bookingData.customerName},</p>
-      <p>Great news! ${therapistName} has accepted your booking request.</p>
-      <p><strong>Service:</strong> ${bookingData.service}</p>
-      <p><strong>Date:</strong> ${bookingData.date}</p>
-      <p><strong>Time:</strong> ${bookingData.time}</p>
-      <p><strong>Address:</strong> ${bookingData.address}</p>
-      <p><strong>Total Price:</strong> $${bookingData.price}</p>
-      <p>Your payment has been processed successfully.</p>
-      <p>${therapistName} will contact you before your appointment to confirm details.</p>
-    `;
-
-    if (typeof emailjs !== 'undefined') {
-      emailjs.send('service_puww2kb', 'template_zh8jess', {
-        to_name: bookingData.customerName,
-        to_email: bookingData.customerEmail,
-        subject: 'Booking Confirmed',
-        message_html: emailHTML,
-        html_message: emailHTML,
-        html_content: emailHTML
-      }, 'V8qq2pjH8vfh3a6q3').then(res => {
-        console.log('Confirmation email sent:', res);
-      }).catch(err => {
-        console.error('Confirmation email error:', err);
-      });
-    }
-  }
-
-  function showConfirmationPage(bookingData, therapistName) {
-    document.documentElement.innerHTML = `
-      <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
-        <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-          <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
-          <h1 style="color: #28a745; margin-bottom: 20px;">Booking Confirmed!</h1>
-          <p style="font-size: 18px; color: #666; margin-bottom: 30px;">
-            ${therapistName} has accepted your booking request.
-          </p>
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
-            <h3 style="color: #00729B; margin-top: 0;">Booking Details</h3>
-            <p><strong>Customer:</strong> ${bookingData.customerName}</p>
-            <p><strong>Service:</strong> ${bookingData.service}</p>
-            <p><strong>Duration:</strong> ${bookingData.duration} minutes</p>
-            <p><strong>Date:</strong> ${bookingData.date}</p>
-            <p><strong>Time:</strong> ${bookingData.time}</p>
-            <p><strong>Address:</strong> ${bookingData.address}</p>
-            <p><strong>Total Amount:</strong> $${bookingData.price}</p>
-          </div>
-          <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
-            <p style="margin: 0; color: #28a745;"><strong>Payment has been processed successfully.</strong></p>
-          </div>
-          <p style="color: #666; font-size: 14px; margin-top: 30px;">
-            Thank you for choosing Rejuvenators Mobile Massage!
-          </p>
-        </div>
-      </div>
-    `;
-  }
-
-  // Load Google Maps API and try GPS
-  loadGoogleMapsAPI();
-  tryGeolocation();
-  loadTherapists();
-  initEmailJS();
-
-  // Initial price
-  updatePriceDisplay();
-}); 
+  // ----- Init -----
+  initAutocomplete();
+});
