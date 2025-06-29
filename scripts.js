@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ----- Address Autocomplete -----
   function loadGoogleMapsAPI() {
-    const apiKey = 'AIzaSyBo632bfwdyKtue_-wkAms0Ac2mMRVnTWg';
+    const apiKey = 'AIzaSyBo632bfwdyKtue_-wkAms0Ac2mMRVnTWg'; // Replace with your test key
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initAutocomplete`;
     script.async = true;
@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     emailjs.init('YOUR_EMAILJS_PUBLIC_KEY');
     emailjs.send('YOUR_SERVICE_ID','YOUR_TEMPLATE_ID',{
       to_name: selectedTherapist.name,
-      to_email: 'aishizhenjing@gmail.com',
+      to_email: 'aishizhengjing@gmail.com',
       message: `New booking for ${document.getElementById('service').value}, total $${price}`
     }).then(()=>console.log('Email sent')).catch(console.error);
     show('step5');
