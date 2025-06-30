@@ -302,7 +302,7 @@ function runTimer() {
   },1000);
 }
 
-// Send EmailJS to therapist with accept/decline links
+// Send EmailJS to therapist with accept/decline links (Rejuvenator style)
 function sendTherapistEmail(t) {
   const data = {
     ...getBookingData(),
@@ -314,18 +314,51 @@ function sendTherapistEmail(t) {
   const accept = `${base}?action=accept&booking=${enc}`;
   const decline = `${base}?action=decline&booking=${enc}`;
   const html = `
-    <h2>New Booking</h2>
-    <p>${data.customerName} wants ${data.service} at ${data.time}.</p>
-    <p>
-      <a href="${accept}">✅ ACCEPT</a>
-      &nbsp;
-      <a href="${decline}">❌ DECLINE</a>
-    </p>`;
-  emailjs.send('service_puww2kb','template_zh8jess',{
-    to_name: t.name,
-    to_email: t.email||'aishizhengjing@gmail.com',
-    message_html: html
-  });
+    <div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:20px; border-radius:15px;">
+      <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+        <div style="text-align:center; margin-bottom:30px;">
+          <h1 style="color:#00729B; margin-bottom:10px;">🎉 NEW BOOKING REQUEST</h1>
+          <p style="color:#666; font-size:18px;">You have a new client waiting for you!</p>
+        </div>
+        <div style="background:#f8f9fa; padding:20px; border-radius:8px; margin:20px 0; border-left:4px solid #00729B;">
+          <h3 style="color:#00729B; margin-top:0;">📋 Booking Details</h3>
+          <p><strong>👤 Customer:</strong> ${data.customerName}</p>
+          <p><strong>📧 Email:</strong> ${data.customerEmail}</p>
+          <p><strong>📞 Phone:</strong> ${data.customerPhone}</p>
+          <p><strong>📍 Address:</strong> ${data.address}</p>
+          <p><strong>💆‍♀️ Service:</strong> ${data.service}</p>
+          <p><strong>⏱️ Duration:</strong> ${data.duration} minutes</p>
+          <p><strong>📅 Date:</strong> ${data.date}</p>
+          <p><strong>🕐 Time:</strong> ${data.time}</p>
+          <p><strong>🏠 Room:</strong> ${data.roomNumber || 'N/A'}</p>
+          <p><strong>📝 Booked By:</strong> ${data.bookerName || 'N/A'}</p>
+        </div>
+        <div style="background:#e8f5e8; padding:20px; border-radius:8px; margin:20px 0; border-left:4px solid #28a745;">
+          <h3 style="color:#28a745; margin-top:0;">💰 Your Fees</h3>
+          <p><strong>💳 Your Earnings:</strong> (see admin for details)</p>
+        </div>
+        <div style="background:#fff3cd; padding:15px; border-radius:8px; margin:20px 0; border-left:4px solid #ffc107;">
+          <p style="margin:0; color:#856404;"><strong>⏰ Please respond within 3 minutes (180 seconds) to secure this booking!</strong></p>
+        </div>
+        <div style="text-align:center; margin-top:30px;">
+          <a href="${accept}" style="background:#28a745; color:white; padding:15px 30px; text-decoration:none; border-radius:8px; font-weight:bold; font-size:16px; margin:5px; display:inline-block;">✅ ACCEPT BOOKING</a>
+          <a href="${decline}" style="background:#dc3545; color:white; padding:15px 30px; text-decoration:none; border-radius:8px; font-weight:bold; font-size:16px; margin:5px; display:inline-block;">❌ DECLINE</a>
+        </div>
+        <p style="text-align:center; color:#666; font-size:14px; margin-top:30px;">
+          Thank you for being part of the Rejuvenators team! 💙
+        </p>
+      </div>
+    </div>
+  `;
+  if (typeof emailjs !== 'undefined') {
+    emailjs.send('service_puww2kb','template_zh8jess',{
+      to_name: t.name,
+      to_email: t.email||'aishizhengjing@gmail.com',
+      subject: `New Booking Request for ${t.name}`,
+      message_html: html,
+      html_message: html
+    });
+  }
 }
 
 // Grab all form fields into one object
@@ -390,12 +423,23 @@ window.addEventListener('storage', function(e) {
   }
 });
 
-// Handle Accept/Decline actions if this page is loaded with ?action=accept or ?action=decline
+// --- Therapist Accept/Decline Handler (robust, styled, stops timer, sends email) ---
 (function handleTherapistAction() {
   const urlParams = new URLSearchParams(window.location.search);
   const action = urlParams.get('action');
   if (action === 'accept') {
     localStorage.setItem('bookingAccepted', 'true');
+    // Show Rejuvenator-style confirmation to therapist
+    document.body.innerHTML = `
+      <div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:20px; border-radius:15px; min-height:100vh; display:flex; align-items:center; justify-content:center;">
+        <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.2); text-align:center;">
+          <div style="font-size:60px; margin-bottom:20px;">✅</div>
+          <h1 style="color:#28a745; margin-bottom:20px;">Thank you for Accepting the Booking!</h1>
+          <p style="font-size:18px; color:#666; margin-bottom:30px;">This booking is now <strong>confirmed</strong>.<br>Rejuvenators and the customer have been notified.</p>
+          <p style="color:#666; font-size:14px; margin-top:30px;">You will receive further details by email. 💙</p>
+        </div>
+      </div>
+    `;
     // Send confirmation email to customer
     const bookingParam = urlParams.get('booking');
     let bookingData = null;
@@ -405,7 +449,10 @@ window.addEventListener('storage', function(e) {
     if (bookingData) {
       sendCustomerConfirmationEmail(bookingData, bookingData.therapist || 'Your Therapist');
     }
-    document.body.innerHTML = '<h2>Booking accepted. Thank you!</h2>';
+    // Stop timer in all tabs
+    setTimeout(function() {
+      localStorage.setItem('bookingAccepted', 'true');
+    }, 100); // ensure event fires in all tabs
   } else if (action === 'decline') {
     document.body.innerHTML = '<h2>Booking declined. Thank you for your response.</h2>';
   }
