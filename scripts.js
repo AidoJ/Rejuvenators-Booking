@@ -565,16 +565,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) clearInterval(therapistTimeout);
     
     therapistTimeout = setInterval(() => {
-      // IMMEDIATE and AGGRESSIVE check for acceptance
+      // Simple and reliable acceptance check
       const sessionAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
-      const sessionBookingId = sessionStorage.getItem('acceptedBookingId');
       
       console.log('Timer tick - checking acceptance:', {
         bookingAccepted,
         isProcessingAcceptance,
         sessionAccepted,
-        sessionBookingId,
-        currentBookingId: bookingId
+        timeRemaining
       });
       
       if (bookingAccepted || isProcessingAcceptance || sessionAccepted) {
@@ -975,6 +973,14 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('currentTherapistIndex:', currentTherapistIndex);
     console.log('availableTherapists:', availableTherapists);
     console.log('timeRemaining:', timeRemaining);
+    
+    // Show alert with key info
+    alert(`Debug Info:
+Booking Accepted: ${bookingAccepted}
+Session Accepted: ${sessionStorage.getItem('bookingAccepted')}
+Timer Running: ${therapistTimeout ? 'Yes' : 'No'}
+Time Remaining: ${timeRemaining}
+Current Therapist Index: ${currentTherapistIndex}`);
   };
   
   window.forceAccept = function() {
@@ -1012,6 +1018,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 'Test Therapist');
     
     console.log('Booking force accepted and confirmation shown');
+    alert('Booking force accepted! Check the confirmation page.');
   };
   
   window.clearTimer = function() {
@@ -1020,8 +1027,10 @@ document.addEventListener('DOMContentLoaded', function() {
       clearInterval(therapistTimeout);
       therapistTimeout = null;
       console.log('✅ Timer cleared manually');
+      alert('✅ Timer cleared successfully!');
     } else {
       console.log('❌ No timer running');
+      alert('❌ No timer running');
     }
   };
   
@@ -1029,6 +1038,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Clearing session storage...');
     sessionStorage.clear();
     console.log('✅ Session storage cleared');
+    alert('✅ Session storage cleared!');
   };
   
   window.resetBooking = function() {
@@ -1043,12 +1053,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     sessionStorage.clear();
     console.log('✅ Booking state reset');
+    alert('✅ Booking state reset!');
+  };
+  
+  window.testAcceptance = function() {
+    console.log('Testing acceptance detection...');
+    const url = window.location.href;
+    const testUrl = url + (url.includes('?') ? '&' : '?') + 'action=accept&therapist=TestTherapist&booking=' + encodeURIComponent(JSON.stringify({test: true})) + '&bookingId=test123';
+    console.log('Test URL:', testUrl);
+    alert('Test URL created. Copy this and open in a new tab to test acceptance:\n\n' + testUrl);
   };
   
   // Add test buttons to the page for debugging
   setTimeout(() => {
     const debugDiv = document.createElement('div');
-    debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px; max-width: 200px;';
+    debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px; max-width: 200px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
     debugDiv.innerHTML = `
       <div style="margin-bottom: 5px;"><strong>Debug Tools:</strong></div>
       <button onclick="debugAcceptance()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Debug Info</button>
@@ -1056,6 +1075,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <button onclick="clearTimer()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Clear Timer</button>
       <button onclick="clearSession()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Clear Session</button>
       <button onclick="resetBooking()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Reset Booking</button>
+      <button onclick="testAcceptance()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Test Accept URL</button>
     `;
     document.body.appendChild(debugDiv);
   }, 2000);
