@@ -659,16 +659,18 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (action && therapistName && bookingData && receivedBookingId) {
     if (action === 'accept') {
-      // STRICT check if this booking was already accepted by ANY therapist
+      // Check if this specific booking was already accepted
       const alreadyAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+      const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
       
       console.log('=== ACCEPT CLICKED ===');
       console.log('alreadyAccepted:', alreadyAccepted);
-      console.log('therapistName:', therapistName);
+      console.log('acceptedBookingId:', acceptedBookingId);
       console.log('receivedBookingId:', receivedBookingId);
+      console.log('therapistName:', therapistName);
       
-      if (alreadyAccepted) {
-        console.log('❌ Booking already accepted - showing error page');
+      if (alreadyAccepted && acceptedBookingId === receivedBookingId) {
+        console.log('❌ This specific booking already accepted - showing error page');
         // Show "Already booked" message
         document.documentElement.innerHTML = `
           <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
