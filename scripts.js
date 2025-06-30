@@ -298,7 +298,6 @@ document.addEventListener('DOMContentLoaded', function() {
   let therapistTimeout = null;
   let timeRemaining = 120; // 2 minutes per therapist
   let bookingId = null; // Unique booking ID
-  let isProcessingAcceptance = false; // Prevent race conditions
 
   // Initialize EmailJS
   function initEmailJS() {
@@ -350,7 +349,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     show('step8');
     bookingAccepted = false;
-    isProcessingAcceptance = false;
     currentTherapistIndex = 0;
     
     // Send acknowledgment email to customer
@@ -559,68 +557,38 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function startCountdown() {
-    timeRemaining = 120;
-    const timerElement = document.getElementById('timeRemaining');
-    
+    // ensure no double interval
     if (therapistTimeout) clearInterval(therapistTimeout);
-    
+    bookingAccepted = false;
+    timeRemaining = 120;
+    const timerEl = document.getElementById('timeRemaining');
+    if (timerEl) timerEl.textContent = `${timeRemaining}s`;
+
     therapistTimeout = setInterval(() => {
-      // Simple and reliable acceptance check
-      const sessionAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
-      
-      console.log('Timer tick - checking acceptance:', {
-        bookingAccepted,
-        isProcessingAcceptance,
-        sessionAccepted,
-        timeRemaining
-      });
-      
-      if (bookingAccepted || isProcessingAcceptance || sessionAccepted) {
+      if (bookingAccepted) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
-        bookingAccepted = true;
-        console.log('⏹️ Timer stopped immediately - acceptance detected');
-        
-        // Show confirmation if we have the data
-        if (sessionAccepted) {
-          const acceptedTherapist = sessionStorage.getItem('acceptedTherapist');
-          const acceptedBookingData = sessionStorage.getItem('acceptedBookingData');
-          if (acceptedTherapist && acceptedBookingData) {
-            try {
-              const parsedBookingData = JSON.parse(decodeURIComponent(acceptedBookingData));
-              showConfirmationPage(parsedBookingData, acceptedTherapist);
-            } catch (e) {
-              console.error('Error parsing booking data:', e);
-            }
-          }
-        }
         return;
       }
-      
       timeRemaining--;
-      if (timerElement) timerElement.textContent = `${timeRemaining} seconds`;
-      
+      if (timerEl) timerEl.textContent = `${timeRemaining}s`;
       if (timeRemaining <= 0) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
-        
-        // Final check before moving to next therapist
-        const finalCheck = sessionStorage.getItem('bookingAccepted') === 'true';
-        
-        if (finalCheck) {
-          console.log('Booking was accepted during timeout - stopping');
-          return;
-        }
-        
-        currentTherapistIndex++;
-        
-        if (currentTherapistIndex < availableTherapists.length) {
-          sendRequestToCurrentTherapist();
-        } else {
-          document.getElementById('requestMsg').innerText = 'No therapists responded in time. Your payment will be refunded.';
-        }
+        onTherapistTimeout();
       }
     }, 1000);
+  }
+
+  function onTherapistTimeout() {
+    // called when no response in 120s
+    currentTherapistIndex++;
+    if (currentTherapistIndex < availableTherapists.length) {
+      sendRequestToCurrentTherapist();
+    } else {
+      document.getElementById('requestMsg').innerText =
+        'No therapists responded. Payment will be refunded.';
+    }
   }
 
   // Cross-tab coordination using storage events
@@ -628,7 +596,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (e.key === 'bookingAccepted' && e.newValue === 'true') {
       console.log('📢 Detected bookingAccepted in another tab');
       bookingAccepted = true;
-      isProcessingAcceptance = true;
       
       if (therapistTimeout) {
         clearInterval(therapistTimeout);
@@ -690,7 +657,6 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('✅ Processing acceptance for:', therapistName);
       
       // Process acceptance
-      isProcessingAcceptance = true;
       bookingAccepted = true;
       
       // Stop any running timer immediately
@@ -805,31 +771,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <h1 style="color: #28a745; margin-bottom: 10px;">✅ Booking Confirmed!</h1>
             <p style="color: #666; font-size: 18px;">Hi ${customerName}, great news!</p>
           </div>
-          
-          <div style="background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
-            <p style="margin: 0; color: #155724; text-align: left;">
-              <strong>${therapistName}</strong> has accepted your booking request and will be providing your massage service.
-            </p>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00729B;">
-            <h3 style="color: #00729B; margin-top: 0; text-align: left;">📋 Confirmed Booking Details</h3>
-            <p style="text-align: left;"><strong>👤 Therapist:</strong> ${therapistName}</p>
-            <p style="text-align: left;"><strong>💆‍♀️ Service:</strong> ${bookingData.service}</p>
-            <p style="text-align: left;"><strong>⏱️ Duration:</strong> ${bookingData.duration} minutes</p>
-            <p style="text-align: left;"><strong>📅 Date:</strong> ${bookingData.date}</p>
-            <p style="text-align: left;"><strong>🕐 Time:</strong> ${bookingData.time}</p>
-            <p style="text-align: left;"><strong>📍 Address:</strong> ${bookingData.address}</p>
-            <p style="text-align: left;"><strong>💰 Total Price:</strong> $${bookingData.price}</p>
-          </div>
-          
-          <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
-            <p style="margin: 0; color: #155724; text-align: left;">
-              <strong>💳 Your payment has been processed successfully.</strong>
-            </p>
-          </div>
-          
-          <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
             <p style="margin: 0; color: #856404; text-align: left;">
               <strong>📞 ${therapistName} will contact you before your appointment to confirm details.</strong>
             </p>
@@ -962,7 +903,6 @@ document.addEventListener('DOMContentLoaded', function() {
   window.debugAcceptance = function() {
     console.log('=== DEBUG INFO ===');
     console.log('bookingAccepted:', bookingAccepted);
-    console.log('isProcessingAcceptance:', isProcessingAcceptance);
     console.log('therapistTimeout:', therapistTimeout);
     console.log('sessionStorage bookingAccepted:', sessionStorage.getItem('bookingAccepted'));
     console.log('sessionStorage acceptedBookingId:', sessionStorage.getItem('acceptedBookingId'));
@@ -977,16 +917,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show alert with key info
     alert(`Debug Info:
 Booking Accepted: ${bookingAccepted}
-Session Accepted: ${sessionStorage.getItem('bookingAccepted')}
 Timer Running: ${therapistTimeout ? 'Yes' : 'No'}
-Time Remaining: ${timeRemaining}
-Current Therapist Index: ${currentTherapistIndex}`);
+Time Remaining: ${timeRemaining}`);
   };
   
   window.forceAccept = function() {
     console.log('Force accepting booking...');
     bookingAccepted = true;
-    isProcessingAcceptance = true;
     sessionStorage.setItem('bookingAccepted', 'true');
     sessionStorage.setItem('acceptedBookingId', bookingId || 'test_booking');
     sessionStorage.setItem('acceptedTherapist', 'Test Therapist');
@@ -1044,7 +981,6 @@ Current Therapist Index: ${currentTherapistIndex}`);
   window.resetBooking = function() {
     console.log('Resetting booking state...');
     bookingAccepted = false;
-    isProcessingAcceptance = false;
     currentTherapistIndex = 0;
     timeRemaining = 120;
     if (therapistTimeout) {
@@ -1079,4 +1015,18 @@ Current Therapist Index: ${currentTherapistIndex}`);
     `;
     document.body.appendChild(debugDiv);
   }, 2000);
+
+  // Handle acceptance URL callback
+  (function handleUrlParams() {
+    if (params.get('action') === 'accept' && params.get('bookingId') === bookingId) {
+      bookingAccepted = true;
+      if (therapistTimeout) {
+        clearInterval(therapistTimeout);
+        therapistTimeout = null;
+      }
+      const data = JSON.parse(decodeURIComponent(params.get('booking')));
+      showConfirmationPage(data, params.get('therapist'));
+    }
+  })();
 });
+
