@@ -53,12 +53,12 @@ document.querySelectorAll('.prev').forEach(b=>b.onclick=()=>showStep(currentStep
 function loadTherapists() {
   fetch('mock-api/therapists.json')
     .then(r=>r.json()).then(js=>therapists=js)
-    .catch(console.error);
+    .catch(()=>{});
 }
 
 // Haversine formula to compute distance between two lat/lon points (in km)
 function distanceKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth radius in km
+  const R = 6371;
   const toRad = deg => deg * Math.PI / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
@@ -83,7 +83,6 @@ function tryGeolocation() {
 function loadTherapistsUI() {
   const selDiv = document.getElementById('therapistSelection');
   const btn = document.getElementById('requestBtn');
-  // Only show therapists within 20 km if we have a location
   let filtered = therapists;
   if (currentLat !== null && currentLon !== null) {
     filtered = therapists.filter(t => {
@@ -99,7 +98,6 @@ function loadTherapistsUI() {
     btn.disabled = true;
     return;
   }
-  // Sort by distance if possible
   if (currentLat !== null && currentLon !== null) {
     availableTherapists.sort((a, b) => {
       const dA = distanceKm(currentLat, currentLon, a.lat, a.lon);
@@ -123,32 +121,30 @@ function loadTherapistsUI() {
   };
   btn.disabled = false;
 }
-
-// Address manual input fallback: if user types an address (no autocomplete)
-const addressEl = document.getElementById('address');
-if (addressEl) {
-  addressEl.addEventListener('input', function() {
-    if (this.value.length > 10 && (currentLat === null || currentLon === null)) {
-      // Default to Brisbane CBD coordinates if none obtained
-      currentLat = -27.4698;
-      currentLon = 153.0251;
-    }
-  });
-}
-
 document.getElementById('requestBtn')?.addEventListener('click', ()=>{
   if (!selectedTherapist) return alert('Select a therapist');
   availableTherapists = [ selectedTherapist, ...availableTherapists.filter(t=>t!==selectedTherapist) ];
   showStep(7);
 });
 
+// Address manual input fallback: if user types an address (no autocomplete)
+const addressEl = document.getElementById('address');
+if (addressEl) {
+  addressEl.addEventListener('input', function() {
+    if (this.value.length > 10 && (currentLat === null || currentLon === null)) {
+      currentLat = -27.4698;
+      currentLon = 153.0251;
+    }
+  });
+}
+
 // Step 7: Initialize Stripe Elements
 function initStripe() {
   const summary = document.getElementById('summary');
   const price = calculatePrice();
   summary.innerHTML = `<p><strong>Total:</strong> $${price}</p>
-    <div id="card-element"></div>
-    <button id="payBtn" disabled style="opacity:.5">Pay</button>`;
+    <div id=\"card-element\"></div>
+    <button id=\"payBtn\" disabled style=\"opacity:.5\">Pay</button>`;
 
   stripe = Stripe('pk_test_51PGxKUKn3GaB6FyY1qeTOeYxWnBMDax8bUZhdP7RggDi1OyUp4BbSJWPhgb7hcvDynNqakuSfpGzwfuVhOsTvXmb001lwoCn7a');
   const elements = stripe.elements();
@@ -184,6 +180,10 @@ function startBookingRequest() {
 }
 
 function contactTherapist() {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
   if (bookingAccepted || currentTherapistIndex>=availableTherapists.length) {
     if(!bookingAccepted) {
       document.getElementById('requestMsg').innerText = 'No response – refund issued.';
@@ -196,21 +196,28 @@ function contactTherapist() {
     currentTherapistIndex===0
       ? `Requesting ${t.name}…`
       : `Fallback → requesting ${t.name}…`;
-
   sendTherapistEmail(t);
   runTimer();
 }
 
 function runTimer() {
-  clearInterval(timer);
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
   timeRemaining = 180;
   document.getElementById('timeRemaining').textContent = `${timeRemaining}s`;
   timer = setInterval(()=>{
-    if (bookingAccepted) return clearInterval(timer);
+    if (bookingAccepted) {
+      clearInterval(timer);
+      timer = null;
+      return;
+    }
     timeRemaining--;
     document.getElementById('timeRemaining').textContent = `${timeRemaining}s`;
     if (timeRemaining<=0) {
       clearInterval(timer);
+      timer = null;
       currentTherapistIndex++;
       contactTherapist();
     }
@@ -286,12 +293,8 @@ window.initAutocomplete = function() {
         currentLon = place.geometry.location.lng();
       }
     });
-  } catch (e) {
-    console.error('Google Autocomplete error:', e);
-  }
+  } catch (e) {}
 };
-
-// On load
 
 document.addEventListener('DOMContentLoaded', ()=>{
   bindPrice();
