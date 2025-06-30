@@ -1,5 +1,10 @@
 // Rejuvenators Booking System v12 - Fixed Timer and Messaging
 
+// --- at top of your script, alongside other globals ---
+let therapistTimeout = null;
+let timeRemaining   = 120;
+let bookingAccepted = false;
+
 document.addEventListener('DOMContentLoaded', function() {
   // Step navigation
   let currentStep = 'step1';
@@ -293,10 +298,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // --- Booking Request & Notification System ---
-  let bookingAccepted = false;
-  let currentTherapistIndex = 0;
-  let therapistTimeout = null;
-  let timeRemaining = 120; // 2 minutes per therapist
   let bookingId = null; // Unique booking ID
 
   // Initialize EmailJS
@@ -561,8 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) clearInterval(therapistTimeout);
     bookingAccepted = false;
     timeRemaining = 120;
-    const timerEl = document.getElementById('timeRemaining');
-    if (timerEl) timerEl.textContent = `${timeRemaining}s`;
+    document.getElementById('timeRemaining').textContent = `${timeRemaining}s`;
 
     therapistTimeout = setInterval(() => {
       if (bookingAccepted) {
@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       timeRemaining--;
-      if (timerEl) timerEl.textContent = `${timeRemaining}s`;
+      document.getElementById('timeRemaining').textContent = `${timeRemaining}s`;
       if (timeRemaining <= 0) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
@@ -1018,6 +1018,7 @@ Time Remaining: ${timeRemaining}`);
 
   // Handle acceptance URL callback
   (function handleUrlParams() {
+    const params = new URLSearchParams(window.location.search);
     if (params.get('action') === 'accept' && params.get('bookingId') === bookingId) {
       bookingAccepted = true;
       if (therapistTimeout) {
