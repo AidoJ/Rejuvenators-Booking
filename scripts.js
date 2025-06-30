@@ -330,6 +330,13 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   function startBookingRequest() {
+    // Check if already accepted before starting
+    const alreadyAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+    if (alreadyAccepted) {
+      console.log('❌ Booking already accepted - not starting new request');
+      return;
+    }
+    
     if (bookingAccepted) return;
     
     // Generate unique booking ID
@@ -558,15 +565,37 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) clearInterval(therapistTimeout);
     
     therapistTimeout = setInterval(() => {
-      // AGGRESSIVE check for acceptance - check both global flags and sessionStorage
+      // IMMEDIATE and AGGRESSIVE check for acceptance
       const sessionAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
       const sessionBookingId = sessionStorage.getItem('acceptedBookingId');
       
-      if (bookingAccepted || isProcessingAcceptance || (sessionAccepted && sessionBookingId === bookingId)) {
+      console.log('Timer tick - checking acceptance:', {
+        bookingAccepted,
+        isProcessingAcceptance,
+        sessionAccepted,
+        sessionBookingId,
+        currentBookingId: bookingId
+      });
+      
+      if (bookingAccepted || isProcessingAcceptance || sessionAccepted) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
         bookingAccepted = true;
         console.log('⏹️ Timer stopped immediately - acceptance detected');
+        
+        // Show confirmation if we have the data
+        if (sessionAccepted) {
+          const acceptedTherapist = sessionStorage.getItem('acceptedTherapist');
+          const acceptedBookingData = sessionStorage.getItem('acceptedBookingData');
+          if (acceptedTherapist && acceptedBookingData) {
+            try {
+              const parsedBookingData = JSON.parse(decodeURIComponent(acceptedBookingData));
+              showConfirmationPage(parsedBookingData, acceptedTherapist);
+            } catch (e) {
+              console.error('Error parsing booking data:', e);
+            }
+          }
+        }
         return;
       }
       
@@ -579,9 +608,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Final check before moving to next therapist
         const finalCheck = sessionStorage.getItem('bookingAccepted') === 'true';
-        const finalBookingId = sessionStorage.getItem('acceptedBookingId');
         
-        if (finalCheck && finalBookingId === bookingId) {
+        if (finalCheck) {
           console.log('Booking was accepted during timeout - stopping');
           return;
         }
@@ -631,16 +659,16 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (action && therapistName && bookingData && receivedBookingId) {
     if (action === 'accept') {
-      // Check if this booking was already accepted by ANY therapist
+      // STRICT check if this booking was already accepted by ANY therapist
       const alreadyAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
-      const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
       
-      console.log('Accept clicked - checking if already accepted');
+      console.log('=== ACCEPT CLICKED ===');
       console.log('alreadyAccepted:', alreadyAccepted);
-      console.log('acceptedBookingId:', acceptedBookingId);
+      console.log('therapistName:', therapistName);
       console.log('receivedBookingId:', receivedBookingId);
       
       if (alreadyAccepted) {
+        console.log('❌ Booking already accepted - showing error page');
         // Show "Already booked" message
         document.documentElement.innerHTML = `
           <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
@@ -658,6 +686,8 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         return;
       }
+      
+      console.log('✅ Processing acceptance for:', therapistName);
       
       // Process acceptance
       isProcessingAcceptance = true;
@@ -936,11 +966,13 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('therapistTimeout:', therapistTimeout);
     console.log('sessionStorage bookingAccepted:', sessionStorage.getItem('bookingAccepted'));
     console.log('sessionStorage acceptedBookingId:', sessionStorage.getItem('acceptedBookingId'));
+    console.log('sessionStorage acceptedTherapist:', sessionStorage.getItem('acceptedTherapist'));
     console.log('current bookingId:', bookingId);
     console.log('Customer email:', document.getElementById('customerEmail')?.value);
     console.log('Customer name:', document.getElementById('customerName')?.value);
     console.log('currentTherapistIndex:', currentTherapistIndex);
     console.log('availableTherapists:', availableTherapists);
+    console.log('timeRemaining:', timeRemaining);
   };
   
   window.forceAccept = function() {
@@ -949,11 +981,35 @@ document.addEventListener('DOMContentLoaded', function() {
     isProcessingAcceptance = true;
     sessionStorage.setItem('bookingAccepted', 'true');
     sessionStorage.setItem('acceptedBookingId', bookingId || 'test_booking');
+    sessionStorage.setItem('acceptedTherapist', 'Test Therapist');
+    sessionStorage.setItem('acceptedBookingData', JSON.stringify({
+      customerName: 'Test Customer',
+      service: 'Test Service',
+      duration: '60',
+      date: '2024-01-01',
+      time: '10:00',
+      address: 'Test Address',
+      price: '159.00'
+    }));
+    
     if (therapistTimeout) {
       clearInterval(therapistTimeout);
       therapistTimeout = null;
+      console.log('Timer cleared by force accept');
     }
-    console.log('Booking force accepted');
+    
+    // Show confirmation page
+    showConfirmationPage({
+      customerName: 'Test Customer',
+      service: 'Test Service',
+      duration: '60',
+      date: '2024-01-01',
+      time: '10:00',
+      address: 'Test Address',
+      price: '159.00'
+    }, 'Test Therapist');
+    
+    console.log('Booking force accepted and confirmation shown');
   };
   
   window.clearTimer = function() {
@@ -961,22 +1017,43 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) {
       clearInterval(therapistTimeout);
       therapistTimeout = null;
-      console.log('Timer cleared manually');
+      console.log('✅ Timer cleared manually');
     } else {
-      console.log('No timer running');
+      console.log('❌ No timer running');
     }
+  };
+  
+  window.clearSession = function() {
+    console.log('Clearing session storage...');
+    sessionStorage.clear();
+    console.log('✅ Session storage cleared');
+  };
+  
+  window.resetBooking = function() {
+    console.log('Resetting booking state...');
+    bookingAccepted = false;
+    isProcessingAcceptance = false;
+    currentTherapistIndex = 0;
+    timeRemaining = 120;
+    if (therapistTimeout) {
+      clearInterval(therapistTimeout);
+      therapistTimeout = null;
+    }
+    sessionStorage.clear();
+    console.log('✅ Booking state reset');
   };
   
   // Add test buttons to the page for debugging
   setTimeout(() => {
     const debugDiv = document.createElement('div');
-    debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px;';
+    debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px; max-width: 200px;';
     debugDiv.innerHTML = `
       <div style="margin-bottom: 5px;"><strong>Debug Tools:</strong></div>
-      <button onclick="debugAcceptance()" style="margin: 2px; padding: 5px; font-size: 11px;">Debug Info</button><br>
-      <button onclick="forceAccept()" style="margin: 2px; padding: 5px; font-size: 11px;">Force Accept</button><br>
-      <button onclick="clearTimer()" style="margin: 2px; padding: 5px; font-size: 11px;">Clear Timer</button><br>
-      <button onclick="sessionStorage.clear(); console.log('Session cleared')" style="margin: 2px; padding: 5px; font-size: 11px;">Clear Session</button>
+      <button onclick="debugAcceptance()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Debug Info</button>
+      <button onclick="forceAccept()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Force Accept</button>
+      <button onclick="clearTimer()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Clear Timer</button>
+      <button onclick="clearSession()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Clear Session</button>
+      <button onclick="resetBooking()" style="margin: 2px; padding: 5px; font-size: 11px; width: 100%;">Reset Booking</button>
     `;
     document.body.appendChild(debugDiv);
   }, 2000);
