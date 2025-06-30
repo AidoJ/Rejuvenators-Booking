@@ -144,7 +144,7 @@ function initStripe() {
   const price = calculatePrice();
   summary.innerHTML = `<p><strong>Total:</strong> $${price}</p>
     <div id=\"card-element\"></div>
-    <button id=\"payBtn\" disabled style=\"opacity:.5\">Pay</button>`;
+    <button id=\"payBtn\" disabled style=\"opacity:.5\">Submit Booking Request</button>`;
 
   stripe = Stripe('pk_test_51PGxKUKn3GaB6FyY1qeTOeYxWnBMDax8bUZhdP7RggDi1OyUp4BbSJWPhgb7hcvDynNqakuSfpGzwfuVhOsTvXmb001lwoCn7a');
   const elements = stripe.elements();
