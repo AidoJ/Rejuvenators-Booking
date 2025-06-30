@@ -144,7 +144,7 @@ function initStripe() {
   const price = calculatePrice();
   summary.innerHTML = `<p><strong>Total:</strong> $${price}</p>
     <div id=\"card-element\"></div>
-    <button id=\"payBtn\" disabled style=\"opacity:.5\">Submit Booking Request</button>`;
+    <button id=\"payBtn\" class=\"btn primary\" disabled style=\"opacity:.5; width:100%; font-size:18px; padding:18px 0; margin-top:20px;\">Submit Booking Request</button>`;
 
   stripe = Stripe('pk_test_51PGxKUKn3GaB6FyY1qeTOeYxWnBMDax8bUZhdP7RggDi1OyUp4BbSJWPhgb7hcvDynNqakuSfpGzwfuVhOsTvXmb001lwoCn7a');
   const elements = stripe.elements();
@@ -254,6 +254,10 @@ function startBookingRequest() {
   currentTherapistIndex = 0;
   showStep(8);
   sendCustomerAcknowledgmentEmail();
+  // Save booking data for fallback
+  try {
+    localStorage.setItem('lastBookingData', JSON.stringify(getBookingData()));
+  } catch (e) {}
   contactTherapist();
 }
 
@@ -286,7 +290,7 @@ function runTimer() {
   timeRemaining = 180;
   document.getElementById('timeRemaining').textContent = `${timeRemaining}s`;
   timer = setInterval(()=>{
-    if (bookingAccepted) {
+    if (bookingAccepted || window.bookingAccepted || localStorage.getItem('bookingAccepted') === 'true') {
       clearInterval(timer);
       timer = null;
       return;
@@ -429,6 +433,7 @@ window.addEventListener('storage', function(e) {
   const action = urlParams.get('action');
   if (action === 'accept') {
     localStorage.setItem('bookingAccepted', 'true');
+    window.bookingAccepted = true;
     // Show Rejuvenator-style confirmation to therapist
     document.body.innerHTML = `
       <div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:20px; border-radius:15px; min-height:100vh; display:flex; align-items:center; justify-content:center;">
@@ -441,18 +446,25 @@ window.addEventListener('storage', function(e) {
       </div>
     `;
     // Send confirmation email to customer
-    const bookingParam = urlParams.get('booking');
     let bookingData = null;
+    const bookingParam = urlParams.get('booking');
     try {
       bookingData = bookingParam ? JSON.parse(decodeURIComponent(bookingParam)) : null;
     } catch (e) {}
+    // Fallback: try to get from localStorage if not in URL
+    if (!bookingData && localStorage.getItem('lastBookingData')) {
+      try {
+        bookingData = JSON.parse(localStorage.getItem('lastBookingData'));
+      } catch (e) {}
+    }
     if (bookingData) {
       sendCustomerConfirmationEmail(bookingData, bookingData.therapist || 'Your Therapist');
     }
     // Stop timer in all tabs
     setTimeout(function() {
       localStorage.setItem('bookingAccepted', 'true');
-    }, 100); // ensure event fires in all tabs
+      window.bookingAccepted = true;
+    }, 100);
   } else if (action === 'decline') {
     document.body.innerHTML = '<h2>Booking declined. Thank you for your response.</h2>';
   }
