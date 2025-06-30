@@ -475,9 +475,17 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function sendCustomerAcknowledgmentEmail() {
+    const customerEmail = document.getElementById('customerEmail').value;
+    const customerName = document.getElementById('customerName').value;
+    
+    if (!customerEmail || !customerName) {
+      console.error('Customer email or name not found');
+      return;
+    }
+    
     const bookingData = {
-      customerName: document.getElementById('customerName').value,
-      customerEmail: document.getElementById('customerEmail').value,
+      customerName: customerName,
+      customerEmail: customerEmail,
       customerPhone: document.getElementById('customerPhone').value,
       address: document.getElementById('address').value,
       service: document.getElementById('service').value,
@@ -525,18 +533,21 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
 
     if (typeof emailjs !== 'undefined') {
+      console.log('Sending acknowledgment email to:', customerEmail);
       emailjs.send('service_puww2kb', 'template_zh8jess', {
         to_name: bookingData.customerName,
-        to_email: bookingData.customerEmail,
+        to_email: customerEmail,
         subject: 'Booking Request Received',
         message_html: emailHTML,
         html_message: emailHTML,
         html_content: emailHTML
       }, 'V8qq2pjH8vfh3a6q3').then(res => {
-        console.log('Customer acknowledgment email sent:', res);
+        console.log('Customer acknowledgment email sent successfully:', res);
       }).catch(err => {
-        console.error('Customer email error:', err);
+        console.error('Customer acknowledgment email error:', err);
       });
+    } else {
+      console.error('EmailJS not available');
     }
   }
 
@@ -547,15 +558,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) clearInterval(therapistTimeout);
     
     therapistTimeout = setInterval(() => {
-      // Check if booking was already accepted
+      // IMMEDIATE check for acceptance - this is the key fix
       if (bookingAccepted || isProcessingAcceptance) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
-        console.log('⏹️ Countdown cleared because bookingAccepted or processing');
+        console.log('⏹️ Timer stopped immediately due to acceptance');
         return;
       }
       
-      // Check if booking was accepted (persists across page reloads)
+      // Check sessionStorage for acceptance
       const wasAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
       const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
       
@@ -583,11 +594,12 @@ document.addEventListener('DOMContentLoaded', function() {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
         
-        // Double check booking wasn't accepted in the last second
+        // Final check before moving to next therapist
         const finalCheck = sessionStorage.getItem('bookingAccepted') === 'true';
         const finalBookingId = sessionStorage.getItem('acceptedBookingId');
         
         if (finalCheck && finalBookingId === bookingId) {
+          console.log('Booking was accepted during timeout - stopping');
           return;
         }
         
@@ -760,12 +772,20 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function sendCustomerConfirmationEmail(bookingData, therapistName) {
+    const customerEmail = bookingData.customerEmail;
+    const customerName = bookingData.customerName;
+    
+    if (!customerEmail || !customerName) {
+      console.error('Customer email or name missing in confirmation email');
+      return;
+    }
+    
     const emailHTML = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px;">
         <div style="background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
           <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: #28a745; margin-bottom: 10px;">✅ Booking Confirmed!</h1>
-            <p style="color: #666; font-size: 18px;">Hi ${bookingData.customerName}, great news!</p>
+            <p style="color: #666; font-size: 18px;">Hi ${customerName}, great news!</p>
           </div>
           
           <div style="background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
@@ -782,7 +802,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <p style="text-align: left;"><strong>📅 Date:</strong> ${bookingData.date}</p>
             <p style="text-align: left;"><strong>🕐 Time:</strong> ${bookingData.time}</p>
             <p style="text-align: left;"><strong>📍 Address:</strong> ${bookingData.address}</p>
-            <p style="text-align: left;"><strong>💰 Total Price:</strong> ${bookingData.price}</p>
+            <p style="text-align: left;"><strong>💰 Total Price:</strong> $${bookingData.price}</p>
           </div>
           
           <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
@@ -805,18 +825,21 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
 
     if (typeof emailjs !== 'undefined') {
+      console.log('Sending confirmation email to:', customerEmail);
       emailjs.send('service_puww2kb', 'template_zh8jess', {
-        to_name: bookingData.customerName,
-        to_email: bookingData.customerEmail,
+        to_name: customerName,
+        to_email: customerEmail,
         subject: 'Booking Confirmed - ' + therapistName,
         message_html: emailHTML,
         html_message: emailHTML,
         html_content: emailHTML
       }, 'V8qq2pjH8vfh3a6q3').then(res => {
-        console.log('Customer confirmation email sent:', res);
+        console.log('Customer confirmation email sent successfully:', res);
       }).catch(err => {
         console.error('Customer confirmation email error:', err);
       });
+    } else {
+      console.error('EmailJS not available for confirmation email');
     }
   }
 
@@ -916,4 +939,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initial price
   updatePriceDisplay();
+  
+  // Debug functions for testing
+  window.debugAcceptance = function() {
+    console.log('=== DEBUG INFO ===');
+    console.log('bookingAccepted:', bookingAccepted);
+    console.log('isProcessingAcceptance:', isProcessingAcceptance);
+    console.log('therapistTimeout:', therapistTimeout);
+    console.log('sessionStorage bookingAccepted:', sessionStorage.getItem('bookingAccepted'));
+    console.log('sessionStorage acceptedBookingId:', sessionStorage.getItem('acceptedBookingId'));
+    console.log('current bookingId:', bookingId);
+    console.log('Customer email:', document.getElementById('customerEmail')?.value);
+    console.log('Customer name:', document.getElementById('customerName')?.value);
+  };
+  
+  // Add test buttons to the page for debugging
+  setTimeout(() => {
+    const debugDiv = document.createElement('div');
+    debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px;';
+    debugDiv.innerHTML = `
+      <button onclick="debugAcceptance()" style="margin: 2px; padding: 5px;">Debug Info</button>
+      <button onclick="sessionStorage.setItem('bookingAccepted', 'true'); console.log('Set acceptance manually')" style="margin: 2px; padding: 5px;">Set Accepted</button>
+      <button onclick="if(therapistTimeout) { clearInterval(therapistTimeout); therapistTimeout = null; console.log('Timer cleared manually') }" style="margin: 2px; padding: 5px;">Clear Timer</button>
+    `;
+    document.body.appendChild(debugDiv);
+  }, 2000);
 });
