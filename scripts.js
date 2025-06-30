@@ -558,32 +558,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (therapistTimeout) clearInterval(therapistTimeout);
     
     therapistTimeout = setInterval(() => {
-      // IMMEDIATE check for acceptance - this is the key fix
-      if (bookingAccepted || isProcessingAcceptance) {
-        clearInterval(therapistTimeout);
-        therapistTimeout = null;
-        console.log('⏹️ Timer stopped immediately due to acceptance');
-        return;
-      }
+      // AGGRESSIVE check for acceptance - check both global flags and sessionStorage
+      const sessionAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
+      const sessionBookingId = sessionStorage.getItem('acceptedBookingId');
       
-      // Check sessionStorage for acceptance
-      const wasAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
-      const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
-      
-      if (wasAccepted && acceptedBookingId === bookingId) {
-        console.log('Booking was accepted - stopping timer');
+      if (bookingAccepted || isProcessingAcceptance || (sessionAccepted && sessionBookingId === bookingId)) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
         bookingAccepted = true;
-        
-        // Get the accepted data and show confirmation
-        const acceptedTherapist = sessionStorage.getItem('acceptedTherapist');
-        const acceptedBookingData = sessionStorage.getItem('acceptedBookingData');
-        
-        if (acceptedTherapist && acceptedBookingData) {
-          const parsedBookingData = JSON.parse(decodeURIComponent(acceptedBookingData));
-          showConfirmationPage(parsedBookingData, acceptedTherapist);
-        }
+        console.log('⏹️ Timer stopped immediately - acceptance detected');
         return;
       }
       
@@ -624,7 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (therapistTimeout) {
         clearInterval(therapistTimeout);
         therapistTimeout = null;
-        console.log('✅ Cleared therapistTimeout via storage event');
+        console.log('✅ Timer cleared via storage event');
       }
 
       // Show confirmation in the original tab
@@ -648,11 +631,16 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if (action && therapistName && bookingData && receivedBookingId) {
     if (action === 'accept') {
-      // Check if this booking was already accepted
+      // Check if this booking was already accepted by ANY therapist
       const alreadyAccepted = sessionStorage.getItem('bookingAccepted') === 'true';
       const acceptedBookingId = sessionStorage.getItem('acceptedBookingId');
       
-      if (alreadyAccepted && acceptedBookingId === receivedBookingId) {
+      console.log('Accept clicked - checking if already accepted');
+      console.log('alreadyAccepted:', alreadyAccepted);
+      console.log('acceptedBookingId:', acceptedBookingId);
+      console.log('receivedBookingId:', receivedBookingId);
+      
+      if (alreadyAccepted) {
         // Show "Already booked" message
         document.documentElement.innerHTML = `
           <div style="text-align: center; padding: 50px 20px; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
@@ -951,16 +939,44 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('current bookingId:', bookingId);
     console.log('Customer email:', document.getElementById('customerEmail')?.value);
     console.log('Customer name:', document.getElementById('customerName')?.value);
+    console.log('currentTherapistIndex:', currentTherapistIndex);
+    console.log('availableTherapists:', availableTherapists);
+  };
+  
+  window.forceAccept = function() {
+    console.log('Force accepting booking...');
+    bookingAccepted = true;
+    isProcessingAcceptance = true;
+    sessionStorage.setItem('bookingAccepted', 'true');
+    sessionStorage.setItem('acceptedBookingId', bookingId || 'test_booking');
+    if (therapistTimeout) {
+      clearInterval(therapistTimeout);
+      therapistTimeout = null;
+    }
+    console.log('Booking force accepted');
+  };
+  
+  window.clearTimer = function() {
+    console.log('Clearing timer manually...');
+    if (therapistTimeout) {
+      clearInterval(therapistTimeout);
+      therapistTimeout = null;
+      console.log('Timer cleared manually');
+    } else {
+      console.log('No timer running');
+    }
   };
   
   // Add test buttons to the page for debugging
   setTimeout(() => {
     const debugDiv = document.createElement('div');
-    debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px;';
+    debugDiv.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 12px;';
     debugDiv.innerHTML = `
-      <button onclick="debugAcceptance()" style="margin: 2px; padding: 5px;">Debug Info</button>
-      <button onclick="sessionStorage.setItem('bookingAccepted', 'true'); console.log('Set acceptance manually')" style="margin: 2px; padding: 5px;">Set Accepted</button>
-      <button onclick="if(therapistTimeout) { clearInterval(therapistTimeout); therapistTimeout = null; console.log('Timer cleared manually') }" style="margin: 2px; padding: 5px;">Clear Timer</button>
+      <div style="margin-bottom: 5px;"><strong>Debug Tools:</strong></div>
+      <button onclick="debugAcceptance()" style="margin: 2px; padding: 5px; font-size: 11px;">Debug Info</button><br>
+      <button onclick="forceAccept()" style="margin: 2px; padding: 5px; font-size: 11px;">Force Accept</button><br>
+      <button onclick="clearTimer()" style="margin: 2px; padding: 5px; font-size: 11px;">Clear Timer</button><br>
+      <button onclick="sessionStorage.clear(); console.log('Session cleared')" style="margin: 2px; padding: 5px; font-size: 11px;">Clear Session</button>
     `;
     document.body.appendChild(debugDiv);
   }, 2000);
