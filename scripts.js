@@ -1,119 +1,80 @@
-// Rejuvenators Booking System v13 - Refactored Timer and Messaging
+// scripts.js
 
-// --- Global state variables ---
-let therapistTimeout = null;
-let timeRemaining = 180;
-let bookingAccepted = false;
-let currentTherapistIndex = 0;      // tracks which therapist in the list is being contacted
-let bookingId = null;               // unique booking identifier for the current request
-
-let currentLat = null, currentLon = null;
-let therapists = [], availableTherapists = [];
-let selectedTherapist = null;
-
+// --- Global state ---
+let currentStep = 1;
+let therapists = [], availableTherapists = [], selectedTherapist = null;
+let bookingId = null;
+let timer = null, timeRemaining = 180;
+let bookingAccepted = false, currentTherapistIndex = 0;
 let stripe = null, card = null;
 
-// Utility: Get form values easily
-function getValue(id) {
-  const el = document.getElementById(id);
-  return el ? el.value.trim() : '';
-}
+// Helper to read form values
+const getVal = id => document.getElementById(id)?.value.trim() || '';
 
-// Utility: Construct booking data object from form fields
-function getBookingData() {
-  return {
-    customerName: getValue('customerName'),
-    customerEmail: getValue('customerEmail'),
-    customerPhone: getValue('customerPhone'),
-    address: getValue('address'),
-    service: getValue('service'),
-    duration: getValue('duration'),
-    date: getValue('date'),
-    time: getValue('time'),
-    parking: getValue('parking'),
-    roomNumber: getValue('roomNumber'),
-    bookerName: getValue('bookerName'),
-    price: calculatePrice()  // ensure price is calculated from current selections
-  };
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  // --- Step Navigation ---
-  let currentStep = 'step1';
-  function show(step) {
-    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-    const stepEl = document.getElementById(step);
-    if (!stepEl) return;
-    stepEl.classList.add('active');
-    currentStep = step;
-    updateProgressBar(step);
+// Calculate dynamic price
+function calculatePrice() {
+  const base = 159;
+  const dur = parseInt(getVal('duration')) || 60;
+  let price = base + ((dur - 60)/15)*15;
+  const dt = new Date(`${getVal('date')}T${getVal('time')}`);
+  if (!isNaN(dt)) {
+    const wk = [0,6].includes(dt.getUTCDay()), hr = dt.getHours();
+    if (wk || hr<9 || hr>=18) price *= 1.2;
   }
+  if (getVal('parking') !== 'free') price += 20;
+  return price.toFixed(2);
+}
 
-  function updateProgressBar(step) {
-    const progressSteps = document.querySelectorAll('.progress-step');
-    const stepNumber = parseInt(step.replace('step', '')) || 0;
-    progressSteps.forEach((stepElement, index) => {
-      const stepNum = index + 1;
-      stepElement.classList.remove('active', 'completed');
-      if (stepNum < stepNumber) {
-        stepElement.classList.add('completed');
-      } else if (stepNum === stepNumber) {
-        stepElement.classList.add('active');
-      }
+// Update price display whenever inputs change
+function bindPrice() {
+  ['duration','date','time','parking'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      document.getElementById('priceAmount').textContent = calculatePrice();
     });
-  }
-
-  // Next/Prev button handlers
-  document.querySelectorAll('.next').forEach(btn => {
-    btn.onclick = () => show(btn.dataset.next);
   });
-  document.querySelectorAll('.prev').forEach(btn => {
-    btn.onclick = () => show(btn.dataset.prev);
+}
+
+// Step navigation
+function showStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.step').forEach(s => s.classList.toggle('active', s.id==='step'+n));
+  document.querySelectorAll('.progress-step').forEach((ps,i)=>{
+    ps.classList.toggle('completed', i< n-1);
+    ps.classList.toggle('active', i===n-1);
   });
+  if (n===6) loadTherapistsUI();
+  if (n===7) initStripe();
+}
+document.querySelectorAll('.next').forEach(b=>b.onclick=()=>showStep(currentStep+1));
+document.querySelectorAll('.prev').forEach(b=>b.onclick=()=>showStep(currentStep-1));
 
-  // Initialize progress bar at step1
-  updateProgressBar('step1');
+// Load mock therapists.json
+function loadTherapists() {
+  fetch('mock-api/therapists.json')
+    .then(r=>r.json()).then(js=>therapists=js)
+    .catch(console.error);
+}
 
-  // --- Load Therapist Data ---
-  function loadTherapists(callback) {
-    fetch('mock-api/therapists.json')
-      .then(res => res.json())
-      .then(data => {
-        therapists = data;
-        if (callback) callback();
-      })
-      .catch(err => console.error('Error loading therapists data:', err));
+// Step 6: therapist dropdown
+function loadTherapistsUI() {
+  const selDiv = document.getElementById('therapistSelection');
+  const btn = document.getElementById('requestBtn');
+  // simple availability filter—expand with geolocation if you want
+  availableTherapists = therapists.filter(t=>t.available);
+  if (!availableTherapists.length) {
+    selDiv.innerHTML = `<p style="color:red">No therapists available</p>`;
+    btn.disabled = true;
+    return;
   }
-
-  // --- Google Maps Autocomplete for Address ---
-  function loadGoogleMapsAPI() {
-    const apiKey = 'AIzaSyBo632bfwdyKtue_-wkAms0Ac2mMRVnTWg';  // Google Maps API key
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initAutocomplete`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }
-
-  window.initAutocomplete = function() {
-    const addressInput = document.getElementById('address');
-    if (!addressInput) return;
-    if (typeof google === 'undefined' || !google.maps || !google.maps.places) return;
-    try {
-      const autocomplete = new google.maps.places.Autocomplete(addressInput, { 
-        componentRestrictions: { country: 'au' } 
-      });
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (place.geometry && place.geometry.location) {
-          currentLat = place.geometry.location.lat();
-          currentLon = place.geometry.location.lng();
-        }
-      });
-    } catch (e) {
-      console.error('Google Autocomplete error:', e);
-    }
+  selDiv.innerHTML = `
+    <select id="therapistSelect">
+      ${availableTherapists.map((t,i)=>`<option value="${i}">${t.name}</option>`).join('')}
+    </select>`;
+  selectedTherapist = availableTherapists[0];
+  document.getElementById('therapistSelect').onchange = e=>{
+    selectedTherapist = availableTherapists[e.target.value];
   };
+<<<<<<< HEAD
 
   // Fallback: Try browser Geolocation (if user permits)
   function tryGeolocation() {
@@ -888,6 +849,131 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Set initial price display
   updatePriceDisplay();
+=======
+  btn.disabled = false;
+}
+document.getElementById('requestBtn')?.addEventListener('click', ()=>{
+  if (!selectedTherapist) return alert('Select a therapist');
+  availableTherapists = [ selectedTherapist, ...availableTherapists.filter(t=>t!==selectedTherapist) ];
+  showStep(7);
+>>>>>>> 48fad433bfb373c23b74c2b5e3b2910cabd97529
 });
+
+// Step 7: Initialize Stripe Elements
+function initStripe() {
+  const summary = document.getElementById('summary');
+  const price = calculatePrice();
+  summary.innerHTML = `<p><strong>Total:</strong> $${price}</p>
+    <div id="card-element"></div>
+    <button id="payBtn" disabled style="opacity:.5">Pay</button>`;
+
+  stripe = Stripe('pk_test_51PGxKUKn3GaB6FyY1qeTOeYxWnBMDax8bUZhdP7RggDi1OyUp4BbSJWPhgb7hcvDynNqakuSfpGzwfuVhOsTvXmb001lwoCn7a');
+  const elements = stripe.elements();
+  card = elements.create('card', { hidePostalCode: true });
+  card.mount('#card-element');
+  card.on('change', ev=>{
+    const btn = document.getElementById('payBtn');
+    btn.disabled = !ev.complete;
+    btn.style.opacity = ev.complete? '1':'.5';
+  });
+  document.getElementById('payBtn').onclick = handlePayment;
+}
+
+// On Pay: create a token then start booking flow
+function handlePayment() {
+  stripe.createToken(card).then(res=>{
+    if (res.error) {
+      alert(res.error.message);
+    } else {
+      window.paymentToken = res.token.id;
+      startBookingRequest();
+    }
+  });
+}
+
+// Step 8+: loop through therapists with timer
+function startBookingRequest() {
+  bookingId = 'b_'+Date.now();
+  bookingAccepted = false;
+  currentTherapistIndex = 0;
+  showStep(8);
+  contactTherapist();
+}
+
+function contactTherapist() {
+  if (bookingAccepted || currentTherapistIndex>=availableTherapists.length) {
+    if(!bookingAccepted) {
+      document.getElementById('requestMsg').innerText = 'No response – refund issued.';
+    }
+    return;
+  }
+  const t = availableTherapists[currentTherapistIndex];
+  document.getElementById('currentTherapist').textContent = t.name;
+  document.getElementById('requestMsg').innerText = 
+    currentTherapistIndex===0
+      ? `Requesting ${t.name}…`
+      : `Fallback → requesting ${t.name}…`;
+
+  sendTherapistEmail(t);
+  runTimer();
+}
+
+function runTimer() {
+  clearInterval(timer);
+  timeRemaining = 180;
+  document.getElementById('timeRemaining').textContent = `${timeRemaining}s`;
+  timer = setInterval(()=>{
+    if (bookingAccepted) return clearInterval(timer);
+    timeRemaining--;
+    document.getElementById('timeRemaining').textContent = `${timeRemaining}s`;
+    if (timeRemaining<=0) {
+      clearInterval(timer);
+      currentTherapistIndex++;
+      contactTherapist();
+    }
+  },1000);
+}
+
+// Send EmailJS to therapist with accept/decline links
+function sendTherapistEmail(t) {
+  const data = {
+    ...getBookingData(),
+    therapist: t.name,
+    bookingId
+  };
+  const enc = encodeURIComponent(JSON.stringify(data));
+  const base = `${location.origin}${location.pathname}`;
+  const accept = `${base}?action=accept&booking=${enc}`;
+  const decline = `${base}?action=decline&booking=${enc}`;
+  const html = `
+    <h2>New Booking</h2>
+    <p>${data.customerName} wants ${data.service} at ${data.time}.</p>
+    <p>
+      <a href="${accept}">✅ ACCEPT</a>
+      &nbsp;
+      <a href="${decline}">❌ DECLINE</a>
+    </p>`;
+  emailjs.send('service_puww2kb','template_zh8jess',{
+    to_name: t.name,
+    to_email: t.email||'aishizhengjing@gmail.com',
+    message_html: html
+  });
+}
+
+// Grab all form fields into one object
+function getBookingData() {
+  return {
+    customerName: getVal('customerName'),
+    customerEmail: getVal('customerEmail'),
+    customerPhone: getVal('customerPhone'),
+    address: getVal('address'),
+    service: getVal('service'),
+    duration: getVal('duration'),
+    date: getVal('date'),
+    time: getVal('time'),
+    parking: getVal('park
+
+
+
 
 
