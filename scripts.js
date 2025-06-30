@@ -296,6 +296,36 @@ window.initAutocomplete = function() {
   } catch (e) {}
 };
 
+// Listen for cross-tab storage events (therapist Accept/Decline)
+window.addEventListener('storage', function(e) {
+  if (e.key === 'bookingAccepted' && e.newValue === 'true') {
+    bookingAccepted = true;
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    // Update UI to show booking is accepted
+    var msgEl = document.getElementById('requestMsg');
+    if (msgEl) {
+      msgEl.innerText = '🎉 Your booking has been accepted! Your therapist will contact you soon.';
+    }
+  }
+});
+
+// Handle Accept/Decline actions if this page is loaded with ?action=accept or ?action=decline
+(function handleTherapistAction() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = urlParams.get('action');
+  if (action === 'accept') {
+    localStorage.setItem('bookingAccepted', 'true');
+    // Optionally update UI for therapist
+    document.body.innerHTML = '<h2>Booking accepted. Thank you!</h2>';
+  } else if (action === 'decline') {
+    // Optionally handle decline
+    document.body.innerHTML = '<h2>Booking declined. Thank you for your response.</h2>';
+  }
+})();
+
 document.addEventListener('DOMContentLoaded', ()=>{
   bindPrice();
   loadTherapists();
