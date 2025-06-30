@@ -170,12 +170,90 @@ function handlePayment() {
   });
 }
 
+// Send customer acknowledgment email (styled)
+function sendCustomerAcknowledgmentEmail() {
+  const data = getBookingData();
+  if (!data.customerEmail || !data.customerName) return;
+  const emailHTML = `
+    <div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:20px; border-radius:15px;">
+      <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+        <div style="text-align:center; margin-bottom:30px;">
+          <h1 style="color:#00729B; margin-bottom:10px;">📧 Booking Request Received</h1>
+          <p style="color:#666; font-size:18px;">Hi ${data.customerName}, we've got your request!</p>
+        </div>
+        <div style="background:#e8f5e8; padding:20px; border-radius:8px; margin:20px 0; border-left:4px solid #28a745;">
+          <h3 style="color:#28a745; margin-top:0;">✅ What happens next?</h3>
+          <p style="color:#28a745; margin:0;">
+            We're now contacting available therapists in your area. You'll receive a confirmation email once a therapist accepts your booking.
+          </p>
+        </div>
+        <div style="background:#f8f9fa; padding:20px; border-radius:8px; margin:20px 0; border-left:4px solid #00729B;">
+          <h3 style="color:#00729B; margin-top:0;">📋 Your Booking Details</h3>
+          <p><strong>💆‍♀️ Service:</strong> ${data.service}</p>
+          <p><strong>⏱️ Duration:</strong> ${data.duration} minutes</p>
+          <p><strong>📅 Date:</strong> ${data.date}</p>
+          <p><strong>🕐 Time:</strong> ${data.time}</p>
+          <p><strong>📍 Address:</strong> ${data.address}</p>
+          <p><strong>🏠 Room:</strong> ${data.roomNumber || 'N/A'}</p>
+          <p><strong>💰 Total Price:</strong> $${data.price}</p>
+        </div>
+        <div style="background:#fff3cd; padding:15px; border-radius:8px; margin:20px 0; border-left:4px solid #ffc107;">
+          <p style="margin:0; color:#856404;"><strong>💳 Your payment will only be processed once a therapist accepts your booking.</strong></p>
+        </div>
+        <p style="text-align:center; color:#666; font-size:14px; margin-top:30px;">
+          Thank you for choosing Rejuvenators Mobile Massage! We'll be in touch soon. 💙
+        </p>
+      </div>
+    </div>
+  `;
+  if (typeof emailjs !== 'undefined') {
+    emailjs.send('service_puww2kb', 'template_zh8jess', {
+      to_name: data.customerName,
+      to_email: data.customerEmail,
+      subject: 'Booking Request Received',
+      message_html: emailHTML,
+      html_message: emailHTML
+    });
+  }
+}
+
+// Send customer confirmation email (styled)
+function sendCustomerConfirmationEmail(bookingData, therapistName) {
+  if (!bookingData.customerEmail || !bookingData.customerName) return;
+  const emailHTML = `
+    <div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:20px; border-radius:15px;">
+      <div style="background:white; padding:40px; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+        <div style="text-align:center; margin-bottom:30px;">
+          <h1 style="color:#28a745; margin-bottom:10px;">✅ Booking Confirmed!</h1>
+          <p style="color:#666; font-size:18px;">Hi ${bookingData.customerName}, great news!</p>
+        </div>
+        <p style="color:#155724; font-size:16px;">
+          Your booking has been confirmed. <strong>${therapistName}</strong> will be your therapist and will contact you before the appointment to go over any details.
+        </p>
+        <p style="color:#666; font-size:14px; margin-top:30px; text-align:center;">
+          Thank you for choosing Rejuvenators Mobile Massage! 💙
+        </p>
+      </div>
+    </div>
+  `;
+  if (typeof emailjs !== 'undefined') {
+    emailjs.send('service_puww2kb', 'template_zh8jess', {
+      to_name: bookingData.customerName,
+      to_email: bookingData.customerEmail,
+      subject: `Booking Confirmed – ${therapistName} is Booked`,
+      message_html: emailHTML,
+      html_message: emailHTML
+    });
+  }
+}
+
 // Step 8+: loop through therapists with timer
 function startBookingRequest() {
   bookingId = 'b_'+Date.now();
   bookingAccepted = false;
   currentTherapistIndex = 0;
   showStep(8);
+  sendCustomerAcknowledgmentEmail();
   contactTherapist();
 }
 
@@ -318,10 +396,17 @@ window.addEventListener('storage', function(e) {
   const action = urlParams.get('action');
   if (action === 'accept') {
     localStorage.setItem('bookingAccepted', 'true');
-    // Optionally update UI for therapist
+    // Send confirmation email to customer
+    const bookingParam = urlParams.get('booking');
+    let bookingData = null;
+    try {
+      bookingData = bookingParam ? JSON.parse(decodeURIComponent(bookingParam)) : null;
+    } catch (e) {}
+    if (bookingData) {
+      sendCustomerConfirmationEmail(bookingData, bookingData.therapist || 'Your Therapist');
+    }
     document.body.innerHTML = '<h2>Booking accepted. Thank you!</h2>';
   } else if (action === 'decline') {
-    // Optionally handle decline
     document.body.innerHTML = '<h2>Booking declined. Thank you for your response.</h2>';
   }
 })();
