@@ -388,8 +388,20 @@ document.addEventListener('DOMContentLoaded', function() {
       time: document.getElementById('time').value,
       parking: document.getElementById('parking').value,
       roomNumber: document.getElementById('roomNumber').value,
+      bookerName: document.getElementById('bookerName').value,
       price: calculatePrice()
     };
+
+    // Calculate therapist fees based on hourly rates
+    const durationHours = parseInt(bookingData.duration) / 60;
+    const bookingDateTime = new Date(`${bookingData.date}T${bookingData.time}`);
+    const hour = bookingDateTime.getHours();
+    const isWeekend = [0, 6].includes(bookingDateTime.getDay()); // Sunday = 0, Saturday = 6
+    
+    // Normal hours: Monday-Friday 9am-6pm
+    const isNormalHours = !isWeekend && hour >= 9 && hour < 18;
+    const hourlyRate = isNormalHours ? 90 : 105;
+    const therapistFees = (durationHours * hourlyRate).toFixed(2);
 
     const acceptUrl = `${window.location.origin}${window.location.pathname}?action=accept&therapist=${encodeURIComponent(therapist.name)}&booking=${encodeURIComponent(JSON.stringify(bookingData))}&bookingId=${bookingId}`;
     const declineUrl = `${window.location.origin}${window.location.pathname}?action=decline&therapist=${encodeURIComponent(therapist.name)}&booking=${encodeURIComponent(JSON.stringify(bookingData))}&bookingId=${bookingId}`;
@@ -403,25 +415,37 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00729B;">
-            <h3 style="color: #00729B; margin-top: 0;">📋 Booking Details</h3>
-            <p><strong>👤 Customer:</strong> ${bookingData.customerName}</p>
-            <p><strong>📧 Email:</strong> ${bookingData.customerEmail}</p>
-            <p><strong>📞 Phone:</strong> ${bookingData.customerPhone}</p>
-            <p><strong>📍 Address:</strong> ${bookingData.address}</p>
-            <p><strong>💆‍♀️ Service:</strong> ${bookingData.service}</p>
-            <p><strong>⏱️ Duration:</strong> ${bookingData.duration} minutes</p>
-            <p><strong>📅 Date:</strong> ${bookingData.date}</p>
-            <p><strong>🕐 Time:</strong> ${bookingData.time}</p>
-            <p><strong>🏠 Room:</strong> ${bookingData.roomNumber || 'N/A'}</p>
+            <h3 style="color: #00729B; margin-top: 0; text-align: left;">📋 Booking Details</h3>
+            <p style="text-align: left;"><strong>👤 Customer:</strong> ${bookingData.customerName}</p>
+            <p style="text-align: left;"><strong>📧 Email:</strong> ${bookingData.customerEmail}</p>
+            <p style="text-align: left;"><strong>📞 Phone:</strong> ${bookingData.customerPhone}</p>
+            <p style="text-align: left;"><strong>📍 Address:</strong> ${bookingData.address}</p>
+            <p style="text-align: left;"><strong>💆‍♀️ Service:</strong> ${bookingData.service}</p>
+            <p style="text-align: left;"><strong>⏱️ Duration:</strong> ${bookingData.duration} minutes</p>
+            <p style="text-align: left;"><strong>📅 Date:</strong> ${bookingData.date}</p>
+            <p style="text-align: left;"><strong>🕐 Time:</strong> ${bookingData.time}</p>
+            <p style="text-align: left;"><strong>🏠 Room:</strong> ${bookingData.roomNumber || 'N/A'}</p>
+            <p style="text-align: left;"><strong>📝 Booked By:</strong> ${bookingData.bookerName || 'N/A'}</p>
+          </div>
+          
+          <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
+            <h3 style="color: #28a745; margin-top: 0; text-align: left;">💰 Your Fees</h3>
+            <p style="text-align: left;"><strong>⏱️ Duration:</strong> ${bookingData.duration} minutes (${durationHours.toFixed(2)} hours)</p>
+            <p style="text-align: left;"><strong>💵 Hourly Rate:</strong> $${hourlyRate}/hour ${isNormalHours ? '(Normal Hours)' : '(Premium Hours)'}</p>
+            <p style="text-align: left;"><strong>💳 Your Earnings:</strong> $${therapistFees}</p>
           </div>
           
           <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-            <p style="margin: 0; color: #856404;"><strong>⏰ Please respond within 120 seconds to secure this booking!</strong></p>
+            <p style="margin: 0; color: #856404; text-align: left;"><strong>⏰ Please respond within 120 seconds to secure this booking!</strong></p>
           </div>
           
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${acceptUrl}" style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin-right: 15px; font-weight: bold; font-size: 16px;">✅ ACCEPT BOOKING</a>
-            <a href="${declineUrl}" style="background: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">❌ DECLINE</a>
+            <div style="display: block; margin-bottom: 15px;">
+              <a href="${acceptUrl}" style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; margin: 5px;">✅ ACCEPT BOOKING</a>
+            </div>
+            <div style="display: block;">
+              <a href="${declineUrl}" style="background: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; margin: 5px;">❌ DECLINE</a>
+            </div>
           </div>
           
           <p style="text-align: center; color: #666; font-size: 14px; margin-top: 30px;">
@@ -471,23 +495,23 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
           
           <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;">
-            <h3 style="color: #28a745; margin-top: 0;">✅ What happens next?</h3>
-            <p style="margin: 0; color: #28a745;">We're now contacting available therapists in your area. You'll receive a confirmation email once a therapist accepts your booking.</p>
+            <h3 style="color: #28a745; margin-top: 0; text-align: left;">✅ What happens next?</h3>
+            <p style="margin: 0; color: #28a745; text-align: left;">We're now contacting available therapists in your area. You'll receive a confirmation email once a therapist accepts your booking.</p>
           </div>
           
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00729B;">
-            <h3 style="color: #00729B; margin-top: 0;">📋 Your Booking Details</h3>
-            <p><strong>💆‍♀️ Service:</strong> ${bookingData.service}</p>
-            <p><strong>⏱️ Duration:</strong> ${bookingData.duration} minutes</p>
-            <p><strong>📅 Date:</strong> ${bookingData.date}</p>
-            <p><strong>🕐 Time:</strong> ${bookingData.time}</p>
-            <p><strong>📍 Address:</strong> ${bookingData.address}</p>
-            <p><strong>🏠 Room:</strong> ${bookingData.roomNumber || 'N/A'}</p>
-            <p><strong>💰 Total Price:</strong> $${bookingData.price}</p>
+            <h3 style="color: #00729B; margin-top: 0; text-align: left;">📋 Your Booking Details</h3>
+            <p style="text-align: left;"><strong>💆‍♀️ Service:</strong> ${bookingData.service}</p>
+            <p style="text-align: left;"><strong>⏱️ Duration:</strong> ${bookingData.duration} minutes</p>
+            <p style="text-align: left;"><strong>📅 Date:</strong> ${bookingData.date}</p>
+            <p style="text-align: left;"><strong>🕐 Time:</strong> ${bookingData.time}</p>
+            <p style="text-align: left;"><strong>📍 Address:</strong> ${bookingData.address}</p>
+            <p style="text-align: left;"><strong>🏠 Room:</strong> ${bookingData.roomNumber || 'N/A'}</p>
+            <p style="text-align: left;"><strong>💰 Total Price:</strong> $${bookingData.price}</p>
           </div>
           
           <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-            <p style="margin: 0; color: #856404;"><strong>💳 Your payment will only be processed once a therapist accepts your booking.</strong></p>
+            <p style="margin: 0; color: #856404; text-align: left;"><strong>💳 Your payment will only be processed once a therapist accepts your booking.</strong></p>
           </div>
           
           <p style="text-align: center; color: #666; font-size: 14px; margin-top: 30px;">
